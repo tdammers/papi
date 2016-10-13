@@ -9,6 +9,8 @@ from papi.exceptions import RestException, \
                             UnsupportedMediaException
 from traceback import format_exc
 import json
+from papi.fp import fmap
+from papi.hateoas import decorate_list, decorate_dict, decorate_item
 
 logger = logging.getLogger(__name__)
 
@@ -88,9 +90,6 @@ def handle_item(key, resource, request):
         raise MethodNotAllowedException()
     return handler(key, resource, request)
 
-def fmap(f, d):
-    return dict( ( (k, f(v)) for k, v in d.items() ) )
-
 def collection_GET(resource, request):
     if 'list' in dir(resource):
         items = resource.list()
@@ -134,29 +133,6 @@ def item_GET(key, resource, request):
     parent_path = request['parent_path'][:-1]
     item = decorate_item(item, parent_path, key)
     return make_json_response(item)
-
-def decorate_item(item, parent_path, name=None, name_fn=None):
-    if name is None:
-        if name_fn is not None:
-            name = name_fn(item)
-    if not 'keys' in dir(item):
-        item = { 'value': item }
-    if item.get('_links') is None:
-        item['_links'] = {}
-    print(parent_path)
-    print(name)
-    item['_links']['parent'] = '/' + '/'.join(parent_path)
-    if name is not None:
-        self_path = list(parent_path)
-        self_path.append(name)
-        item['_links']['self'] = '/' + '/'.join(self_path)
-    return item
-
-def decorate_list(items, parent_path, name_fn=None):
-    return [ decorate_item(item, parent_path, name_fn=name_fn) for item in items ]
-
-def decorate_dict(items, parent_path):
-    return [ decorate_item(v, parent_path, k) for k, v in items.items() ]
 
 def make_json_response(
         data,
