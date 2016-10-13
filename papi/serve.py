@@ -1,0 +1,101 @@
+import logging
+from papi.request import parse_request
+from papi.exceptions import RestException, \
+                            MalformedException, \
+                            NotFoundException, \
+                            MethodNotAllowedException, \
+                            NotAcceptableException, \
+                            ConflictException, \
+                            UnsupportedMediaException
+from traceback import format_exc
+import json
+
+logger = logging.getLogger(__name__)
+
+def serve_resource(resource, environ, start_response):
+    request = parse_request(environ)
+    status, headers, body = handle_resource(resource, request)
+    status_str = "{0} {1}".format(*status)
+    start_response(status_str, headers)
+    if type(body) is str:
+        body = body.encode('utf8')
+    return body
+
+def handle_resource(resource, request):
+    try:
+        if request['path'] == []:
+            return handle_collection(resource, request)
+        elif len(request['path']) == 1:
+            key = request['path'][0]
+            return handle_item(key, resource, request)
+        else:
+            raise NotFoundException()
+        return (
+            (200, 'OK'),
+            [('Content-type', 'text/plain;charset=utf8')
+            ],
+            "Hello!".encode('utf-8')
+        )
+    except RestException as e:
+        status_code, status_message = e.get_http_status()
+        try:
+            body = e.args[0]
+        except IndexError:
+            body = status_message
+        return (
+            (status_code, status_message),
+            [('Content-type', 'text/plain;charset=utf8')
+            ],
+            body.encode('utf-8')
+        )
+    except Exception:
+        status_code, status_message = 500, 'Internal Server Error'
+        body = "Something went wrong"
+        logger.error(format_exc())
+        return (
+            (status_code, status_message),
+            [('Content-type', 'text/plain;charset=utf8')
+            ],
+            body.encode('utf-8')
+        )
+
+def handle_collection(resource, request):
+    handler = collection_handlers.get(request['method'])
+    if handler is None:
+        raise MethodNotAllowedException()
+    return handler(resource, request)
+
+def handle_item(key, resource, request):
+    handler = item_handlers.get(request['method'])
+    if handler is None:
+        raise MethodNotAllowedException()
+    return handler(key, resource, request)
+
+def collection_GET(resource, request):
+    items = resource.list()
+    if items is None:
+        items = []
+    try:
+        reply = {
+            'count': items['count'],
+            'items': items['items']
+        }
+    except TypeError:
+        reply = {
+            'count': len(items),
+            'items': items
+        }
+
+    return (
+        (200, 'OK'),
+        [('Content-type', 'application/json')
+        ],
+        json.dumps(reply)
+    )
+
+collection_handlers = {
+    'GET': collection_GET
+}
+
+item_handlers = {}
+
