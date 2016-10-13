@@ -27,17 +27,3 @@ def application(env, start_response):
         'things': MyResource(things)
     }
     return serve_resources(resources, env, start_response)
-
-    # headers = [
-    #     ('Content-type', 'text/plain;charset=utf8')
-    # ]
-    # body = ''
-    # for k,v in sorted(dict(env).items()):
-    #     try:
-    #         v = json.dumps(v)
-    #     except TypeError:
-    #         v = repr(v)
-    #     body += "{0}: {1}\n".format(k, v)
-
-    # start_response('200 OK', headers)
-    # return body.encode('utf8')
