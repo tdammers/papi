@@ -1,17 +1,30 @@
 import logging
 import json
-from papi.serve import serve_resource
+from papi.serve import serve_resources
 
 logger = logging.getLogger(__name__)
 
 class MyResource(object):
+    def __init__(self, records):
+        self.records = records
     def list(self, *args, **kwargs):
-        return [1, 2, 3]
+        return list({"name": n, "value": v} for n,v in self.records.items())
+    def item(self, key):
+        return self.records.get(key)
 
 def application(env, start_response):
     logger.info(env)
 
-    return serve_resource(MyResource(), env, start_response)
+    things = {
+        'apple': "I am an apple. Eat me.",
+        'onion': "Hurt me, and I will make you cry.",
+        'banana': "I'll bend either way for you.",
+        'nut': "I'm nuts!"
+    }
+    resources = {
+        'things': MyResource(things)
+    }
+    return serve_resources(resources, env, start_response)
 
     # headers = [
     #     ('Content-type', 'text/plain;charset=utf8')

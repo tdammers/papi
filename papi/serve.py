@@ -12,14 +12,34 @@ import json
 
 logger = logging.getLogger(__name__)
 
-def serve_resource(resource, environ, start_response):
+def serve_resources(resources, environ, start_response):
     request = parse_request(environ)
-    status, headers, body = handle_resource(resource, request)
+    status, headers, body = handle_resources(resources, request)
     status_str = "{0} {1}".format(*status)
     start_response(status_str, headers)
     if type(body) is str:
         body = body.encode('utf8')
     return body
+
+def handle_resources(resources, request):
+    if request['path'] == []:
+        return handle_resource_list(resources, request)
+    else:
+        new_request = dict(request)
+        new_request['path'] = request['path'][1:]
+        key = request['path'][0]
+        resource = resources.get(key)
+        if resource is None:
+            raise NotFoundException()
+        return handle_resource(resource, new_request)
+
+def handle_resource_list(resources, request):
+    return (
+        (200, 'OK'),
+        [('Content-type', 'text/json;charset=utf8')
+        ],
+        json.dumps(list(sorted(resources.keys()))))
+
 
 def handle_resource(resource, request):
     try:
@@ -30,12 +50,6 @@ def handle_resource(resource, request):
             return handle_item(key, resource, request)
         else:
             raise NotFoundException()
-        return (
-            (200, 'OK'),
-            [('Content-type', 'text/plain;charset=utf8')
-            ],
-            "Hello!".encode('utf-8')
-        )
     except RestException as e:
         status_code, status_message = e.get_http_status()
         try:
@@ -72,7 +86,10 @@ def handle_item(key, resource, request):
     return handler(key, resource, request)
 
 def collection_GET(resource, request):
-    items = resource.list()
+    if 'list' in dir(resource):
+        items = resource.list()
+    else:
+        raise MethodNotAllowedException()
     if items is None:
         items = []
     try:
@@ -93,9 +110,24 @@ def collection_GET(resource, request):
         json.dumps(reply)
     )
 
+def item_GET(key, resource, request):
+    if 'item' in dir(resource):
+        item = resource.item(key)
+    else:
+        raise MethodNotAllowedException()
+    if item is None:
+        raise NotFoundException()
+    return (
+        (200, 'OK'),
+        [('Content-type', 'application/json')
+        ],
+        json.dumps(item)
+    )
+
 collection_handlers = {
     'GET': collection_GET
 }
 
-item_handlers = {}
-
+item_handlers = {
+    'GET': item_GET
+}
