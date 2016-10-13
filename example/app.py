@@ -7,8 +7,10 @@ logger = logging.getLogger(__name__)
 class MyResource(object):
     def __init__(self, records):
         self.records = records
+
     def list(self, *args, **kwargs):
-        return list({"name": n, "value": v} for n,v in self.records.items())
+        return self.records
+
     def item(self, key):
         return self.records.get(key)
 
