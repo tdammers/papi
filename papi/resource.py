@@ -37,3 +37,14 @@
 # """ Deletes the item at "key" if it exists. Throws a suitable exception if
 # the item cannot be deleted or doesn't exist.
 # """
+#
+# def structure_item(self, item):
+# """ Transforms the specified "item" into a "dumb" data structure. A dumb data
+# structure is roughly equivalent to the JSON grammar; in practice, it means
+# that only the following data structures should be used:
+# - scalars: integers, floats, booleans, strings
+# - lists ("list")
+# - dictionaries ("dict")
+# - nulls ("None")
+# Resources that do not define this method are required to return dumb data from
+# all retrievals directly.

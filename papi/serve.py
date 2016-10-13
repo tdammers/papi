@@ -88,6 +88,9 @@ def handle_item(key, resource, request):
         raise MethodNotAllowedException()
     return handler(key, resource, request)
 
+def fmap(f, d):
+    return dict( ( (k, f(v)) for k, v in d.items() ) )
+
 def collection_GET(resource, request):
     if 'list' in dir(resource):
         items = resource.list()
@@ -96,9 +99,15 @@ def collection_GET(resource, request):
     if items is None:
         items = {}
     parent_path = request['parent_path']
+    if 'structure_item' in dir(resource):
+        structure_item = resource.structure_item
+    else:
+        structure_item = lambda x: x
     if type(items) is dict:
+        items = fmap(structure_item, items)
         items = decorate_dict(items, parent_path)
     else:
+        items = map(structure_item, items)
         items = decorate_list(items, parent_path, resource.key_prop)
     try:
         reply = {
@@ -120,6 +129,8 @@ def item_GET(key, resource, request):
         raise MethodNotAllowedException()
     if item is None:
         raise NotFoundException()
+    if 'structure_item' in dir(resource):
+        item = resource.structure_item(item)
     parent_path = request['parent_path'][:-1]
     item = decorate_item(item, parent_path, key)
     return make_json_response(item)

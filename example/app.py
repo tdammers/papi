@@ -14,6 +14,11 @@ class MyResource(object):
     def item(self, key):
         return self.records.get(key)
 
+    def structure_item(self, item):
+        return {
+            'message': item
+        }
+
 def application(env, start_response):
     logger.info(env)
 
