@@ -1,11 +1,13 @@
+from urllib.parse import parse_qs
+
 def parse_request(environ):
-    request = dict()
-    request['path'] = parse_path(environ['PATH_INFO'])
-    request['accept'] = environ['HTTP_ACCEPT'].split(',')
-    request['headers'] = get_headers(environ)
-    request['method'] = environ['REQUEST_METHOD']
-    request['query'] = parse_query_string(environ['QUERY_STRING'])
-    return request
+    return {
+        'path': parse_path(environ['PATH_INFO']),
+        'accept': environ['HTTP_ACCEPT'].split(','),
+        'headers': get_headers(environ),
+        'method': environ['REQUEST_METHOD'],
+        'query': parse_qs(environ['QUERY_STRING'], keep_blank_values=True),
+    }
 
 def get_headers(environ):
     headers = []
@@ -13,10 +15,6 @@ def get_headers(environ):
         if name.startswith('HTTP_'):
             headers.append((name[5:], val))
             
-def parse_query_string(s):
-    parts = s.split('&')
-    return parts
-
 def parse_path(s, skip_trailing_slash=True):
     parts = s.split('/')
     if parts == []:
