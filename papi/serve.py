@@ -16,16 +16,16 @@ from papi.mime import match_mime, mime_str, parse_mime_type
 
 logger = logging.getLogger(__name__)
 
-def serve_resource(resource, environ, start_response, converters=None):
+def serve_resource(resource, environ, start_response, response_writers=None):
     try:
-        if isinstance(converters, dict):
-            converters = converters.items()
+        if isinstance(response_writers, dict):
+            response_writers = response_writers.items()
         request = parse_request(environ)
         request = fp.assocs(
                     [
                         ('consumed_path', ()),
                         ('remaining_path', request['path']),
-                        ('converters', converters or []),
+                        ('response_writers', response_writers or []),
                     ],
                     request)
         status, headers, body = handle_resource(resource, request)
@@ -101,14 +101,14 @@ def get_resource_body(resource):
         digest = resource
     return digest
 
-def get_resource_converters(resource):
+def get_resource_response_writers(resource):
     try:
-        converters = resource.get_converters()
+        response_writers = resource.get_response_writers()
     except AttributeError:
-        converters = []
-    if isinstance(converters, dict):
-        converters = converters.items()
-    return [(parse_mime_type(k), v) for k, v in converters]
+        response_writers = []
+    if isinstance(response_writers, dict):
+        response_writers = response_writers.items()
+    return [(parse_mime_type(k), v) for k, v in response_writers]
 
 def handle_resource_get_structured(mime_pattern, resource, request):
     raw_body = resource.get_structured_body()
@@ -140,24 +140,25 @@ def handle_resource_get_structured(mime_pattern, resource, request):
     if name is not None:
         body['_name'] = name
 
-    converters = fp.concat([
-        fp.prop('converters', request) or [],
-        get_resource_converters(resource) or [],
-        default_converters,
+    response_writers = fp.concat([
+        fp.prop('response_writers', request) or [],
+        get_resource_response_writers(resource) or [],
+        default_response_writers,
     ])
-    for mime_type, converter in converters:
+    for mime_type, response_writer in response_writers:
         if match_mime(mime_pattern, mime_type, ["charset"]):
-            return make_binary_response(mime_type, converter(body))
+            converted = response_writer(body)
+            return make_binary_response(mime_type, converted)
 
-def json_converter(data):
+def json_writer(data):
     return json.dumps(data)
 
-default_converters = [
+default_response_writers = [
     (parse_mime_type(k), v)
     for (k, v)
     in [
-        ('text/json', json_converter),
-        ('application/json', json_converter),
+        ('text/json', json_writer),
+        ('application/json', json_writer),
        ]
 ]
 
