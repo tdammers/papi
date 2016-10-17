@@ -2,6 +2,7 @@ import logging
 import json
 from papi.serve import serve_resource
 import papi.fp as fp
+from papi.mime import match_mime, parse_mime_type
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,13 @@ class DictResource(object):
 
     def get_structured_body(self, **kwargs):
         return self.data
+
+    def get_typed_body(self, mime_pattern):
+        if isinstance(self.data, str):
+            text_plain_utf8 = parse_mime_type("text/plain;charset=utf8")
+            if match_mime(mime_pattern, text_plain_utf8, ["charset"]):
+                return (text_plain_utf8, self.data)
+        return None
 
     def get_children(self, *args, **kwargs):
         if self.children is None:

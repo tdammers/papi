@@ -1,9 +1,10 @@
 from urllib.parse import parse_qs
+from papi.mime import parse_http_accept
 
 def parse_request(environ):
     return {
         'path': parse_path(environ['PATH_INFO']),
-        'accept': environ['HTTP_ACCEPT'].split(','),
+        'accept': parse_http_accept(environ['HTTP_ACCEPT'], sort=True),
         'headers': get_headers(environ),
         'method': environ['REQUEST_METHOD'],
         'query': parse_qs(environ['QUERY_STRING'], keep_blank_values=True),

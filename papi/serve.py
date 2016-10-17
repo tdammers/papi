@@ -12,18 +12,25 @@ import json
 import papi.fp as fp
 from functools import partial
 from papi.hateoas import hateoas
+from papi.mime import match_mime, mime_str
 
 logger = logging.getLogger(__name__)
 
 def serve_resource(resource, environ, start_response):
-    request = parse_request(environ)
-    request = fp.assocs(
-                [
-                    ('consumed_path', ()),
-                    ('remaining_path', request['path'])
-                ],
-                request)
-    status, headers, body = handle_resource(resource, request)
+    try:
+        request = parse_request(environ)
+        request = fp.assocs(
+                    [
+                        ('consumed_path', ()),
+                        ('remaining_path', request['path'])
+                    ],
+                    request)
+        status, headers, body = handle_resource(resource, request)
+    except RestException as e:
+        status = e.get_http_status()
+        status_code, status_msg = status
+        headers = [('Content-type', 'text/plain;charset=utf8')]
+        body = status_msg
     status_str = "{0} {1}".format(*status)
     start_response(status_str, headers)
     if type(body) is str:
@@ -57,7 +64,26 @@ def handle_resource_self(resource, request):
         raise MethodNotAllowedException
 
 def handle_resource_get(resource, request):
-    return handle_resource_get_json(resource, request)
+    accepts = fp.prop('accept', request)
+    for mime_pattern in accepts:
+        accepted = handle_resource_get_typed(mime_pattern, resource, request)
+        if accepted is not None:
+            return accepted
+    raise NotAcceptableException
+
+def handle_resource_get_typed(mime_pattern, resource, request):
+    if match_mime(mime_pattern, ("text", "json", {})) or \
+       match_mime(mime_pattern, ("application", "json", {})):
+        return handle_resource_get_json(resource, request)
+    else:
+        return handle_resource_get_binary(mime_pattern, resource, request)
+
+def handle_resource_get_binary(mime_pattern, resource, request):
+    matched = resource.get_typed_body(mime_pattern)
+    if matched is None:
+        return None
+    mime_type, body = matched
+    return make_binary_response(mime_type, body)
 
 def get_resource_digest(resource):
     try:
@@ -77,7 +103,7 @@ def handle_resource_get_json(resource, request):
     raw_body = resource.get_structured_body()
     current_path = fp.prop('consumed_path', request)
     name = fp.last(current_path)
-    
+
     offset = fp.path(('query', 'offset'), request)
     count = fp.path(('query', 'count'), request)
 
@@ -123,12 +149,26 @@ def make_json_response(
         data,
         status=200,
         headers=None):
-    content_type='application/json'
+    content_type = 'application/json'
     headers = list(headers or [])
     headers.append(('Content-type', content_type))
     body = json.dumps(data)
     if type(body) is str:
         body = body.encode('utf8')
+    return ((status, status_names.get(status, 'OK')), headers, body)
+
+def make_binary_response(
+        mime_type,
+        data,
+        status=200,
+        headers=None):
+    content_type = mime_str(mime_type)
+    headers = list(headers or [])
+    headers.append(('Content-type', content_type))
+    if type(data) is bytes:
+        body = data
+    else:
+        body = str(data).encode('utf8')
     return ((status, status_names.get(status, 'OK')), headers, body)
 
 status_names = {
