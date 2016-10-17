@@ -18,9 +18,9 @@ def get_headers(environ):
 def parse_path(s, skip_trailing_slash=True):
     parts = s.split('/')
     if parts == []:
-        return parts
+        return tuple(parts)
     if parts[0] == '':
         parts = parts[1:]
     if skip_trailing_slash and parts[-1] == '':
         parts = parts[:-1]
-    return parts
+    return tuple(parts)

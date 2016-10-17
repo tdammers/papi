@@ -1,20 +1,18 @@
-def decorate_item(item, parent_path, name=None, name_fn=None):
-    if name is None:
-        if name_fn is not None:
-            name = name_fn(item)
-    if not 'keys' in dir(item):
-        item = { 'value': item }
-    if item.get('_links') is None:
-        item['_links'] = {}
-    item['_links']['parent'] = '/' + '/'.join(parent_path)
-    if name is not None:
-        self_path = list(parent_path)
-        self_path.append(name)
-        item['_links']['self'] = '/' + '/'.join(self_path)
-    return item
+import papi.fp as fp
 
-def decorate_list(items, parent_path, name_fn=None):
-    return [ decorate_item(item, parent_path, name_fn=name_fn) for item in items ]
+def join_path(path):
+    return '/' + '/'.join(fp.flatten(path))
 
-def decorate_dict(items, parent_path):
-    return [ decorate_item(v, parent_path, k) for k, v in items.items() ]
+def hateoas(path, item):
+    if item == '':
+        item = {'_value': item}
+    try:
+        item = dict(item)
+    except TypeError:
+        item = {'_value': item}
+    except ValueError:
+        item = {'_value': item}
+    return fp.assocs([
+        ('_self', { 'href': join_path(path) }),
+        ('_parent', { 'href': join_path(fp.drop_end(1, path)) })
+    ], item)

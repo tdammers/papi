@@ -9,130 +9,115 @@ from papi.exceptions import RestException, \
                             UnsupportedMediaException
 from traceback import format_exc
 import json
-from papi.fp import fmap
-from papi.hateoas import decorate_list, decorate_dict, decorate_item
+import papi.fp as fp
+from functools import partial
+from papi.hateoas import hateoas
 
 logger = logging.getLogger(__name__)
 
-def serve_resources(resources, environ, start_response):
+def serve_resource(resource, environ, start_response):
     request = parse_request(environ)
-    request['parent_path'] = []
-    status, headers, body = handle_resources(resources, request)
+    request = fp.assocs(
+                [
+                    ('consumed_path', ()),
+                    ('remaining_path', request['path'])
+                ],
+                request)
+    status, headers, body = handle_resource(resource, request)
     status_str = "{0} {1}".format(*status)
     start_response(status_str, headers)
     if type(body) is str:
         body = body.encode('utf8')
     return body
 
-def consume_path(request):
-    new_request = dict(request)
-    new_request['path'] = request['path'][1:]
-    current = request['path'][0]
-    new_request['parent_path'].append(current)
-    return current, new_request
-
-def handle_resources(resources, request):
-    if request['path'] == []:
-        return handle_resource_list(resources, request)
-    else:
-        key, new_request = consume_path(request)
-        resource = resources.get(key)
-        if resource is None:
-            raise NotFoundException()
-        return handle_resource(resource, new_request)
-
-def handle_resource_list(resources, request):
-    parent_path = request['parent_path']
-    items = decorate_list(resources.keys(), parent_path, lambda k: k)
-    return make_json_response(items)
-
 def handle_resource(resource, request):
+    remaining_path = fp.prop('remaining_path', request)
+    print(remaining_path)
+    if len(remaining_path) == 0:
+        return handle_resource_self(resource, request)
+    else:
+        child_name, new_request = consume_path_item(request)
+        child = resource.get_child(child_name)
+        if child is None:
+            raise NotFoundException
+        return handle_resource(child, new_request)
+
+def handle_resource_self(resource, request):
+    method = fp.prop('method', request).upper()
+    logger.warn(method)
+    if method == 'GET':
+        return handle_resource_get(resource, request)
+    # elif method == 'POST':
+    #     handle_resource_post(resource, request)
+    # elif method == 'PUT':
+    #     handle_resource_put(resource, request)
+    # elif method == 'DELETE':
+    #     handle_resource_delete(resource, request)
+    else:
+        raise MethodNotAllowedException
+
+def handle_resource_get(resource, request):
+    return handle_resource_get_json(resource, request)
+
+def get_resource_digest(resource):
     try:
-        if request['path'] == []:
-            return handle_collection(resource, request)
-        elif len(request['path']) == 1:
-            key, new_request = consume_path(request)
-            return handle_item(key, resource, new_request)
-        else:
-            raise NotFoundException()
-    except RestException as e:
-        status_code, status_message = e.get_http_status()
-        try:
-            body = e.args[0]
-        except IndexError:
-            body = status_message
-        return (
-            (status_code, status_message),
-            [('Content-type', 'text/plain;charset=utf8')
-            ],
-            body.encode('utf-8')
-        )
-    except Exception:
-        status_code, status_message = 500, 'Internal Server Error'
-        body = "Something went wrong"
-        logger.error(format_exc())
-        return (
-            (status_code, status_message),
-            [('Content-type', 'text/plain;charset=utf8')
-            ],
-            body.encode('utf-8')
-        )
+        digest = resource.get_structured_body(digest=True)
+    except AttributeError:
+        digest = resource
+    return digest
 
-def handle_collection(resource, request):
-    handler = collection_handlers.get(request['method'])
-    if handler is None:
-        raise MethodNotAllowedException()
-    return handler(resource, request)
-
-def handle_item(key, resource, request):
-    handler = item_handlers.get(request['method'])
-    if handler is None:
-        raise MethodNotAllowedException()
-    return handler(key, resource, request)
-
-def collection_GET(resource, request):
-    if 'list' in dir(resource):
-        items = resource.list()
-    else:
-        raise MethodNotAllowedException()
-    if items is None:
-        items = {}
-    parent_path = request['parent_path']
-    if 'structure_item' in dir(resource):
-        structure_item = resource.structure_item
-    else:
-        structure_item = lambda x: x
-    if type(items) is dict:
-        items = fmap(structure_item, items)
-        items = decorate_dict(items, parent_path)
-    else:
-        items = map(structure_item, items)
-        items = decorate_list(items, parent_path, resource.key_prop)
+def get_resource_body(resource):
     try:
-        reply = {
-            'count': items['count'],
-            'items': items['items']
-        }
-    except TypeError:
-        reply = {
-            'count': len(items),
-            'items': items
-        }
-    reply = decorate_item(reply, parent_path[:-1], parent_path[-1])
-    return make_json_response(reply)
+        digest = resource.get_structured_body()
+    except AttributeError:
+        digest = resource
+    return digest
 
-def item_GET(key, resource, request):
-    if 'item' in dir(resource):
-        item = resource.item(key)
-    else:
-        raise MethodNotAllowedException()
-    if item is None:
-        raise NotFoundException()
-    if 'structure_item' in dir(resource):
-        item = resource.structure_item(item)
-    parent_path = request['parent_path'][:-1]
-    item = decorate_item(item, parent_path, key)
-    return make_json_response(item)
+def handle_resource_get_json(resource, request):
+    raw_body = resource.get_structured_body()
+    current_path = fp.prop('consumed_path', request)
+    name = fp.last(current_path)
+    
+    offset = fp.path(('query', 'offset'), request)
+    count = fp.path(('query', 'count'), request)
+
+    body = hateoas(current_path, raw_body)
+
+    children = resource.get_children(offset=offset, count=count)
+    if children is not None:
+        children_alist = [
+            (k, get_resource_digest(v)) for k, v in children
+        ]
+
+        def prepare_child(kv):
+            name, value = kv
+            if not isinstance(value, dict):
+                value = {'_value': value}
+            return fp.chain(
+                    partial(fp.assoc, '_name', name),
+                    partial(hateoas, fp.snoc(name, current_path))
+                )(value)
+
+        children_list = list(map(prepare_child, children_alist))
+        body['_items'] = children_list
+    if name is not None:
+        body['_name'] = name
+    return make_json_response(body)
+
+def consume_path_item(request):
+    first_item = fp.head(fp.prop('remaining_path', request))
+    if first_item is None:
+        return None, request
+    new_request = fp.chain(
+        partial(
+            fp.Lens.over,
+            fp.prop_lens('remaining_path'),
+            partial(fp.drop, 1)),
+        partial(
+            fp.Lens.over,
+            fp.prop_lens('consumed_path'),
+            partial(fp.snoc, first_item)))(request)
+    return first_item, new_request
 
 def make_json_response(
         data,
@@ -150,12 +135,4 @@ status_names = {
     200: 'OK',
     201: 'Created',
     204: 'No Content'
-}
-
-collection_handlers = {
-    'GET': collection_GET
-}
-
-item_handlers = {
-    'GET': item_GET
 }

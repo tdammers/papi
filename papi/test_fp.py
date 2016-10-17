@@ -162,6 +162,45 @@ def test_take_immutable():
     actual = a
     assert_equal(expected, actual)
 
+# take_end() tests
+
+def test_take_end_happy():
+    expected = (3,4,5)
+    actual = take_end(3, (1,2,3,4,5))
+    assert_equal(expected, actual)
+
+def test_take_end_fewer_available():
+    expected = (1,2)
+    actual = take_end(3, (1,2))
+    assert_equal(expected, actual)
+
+def test_take_end_empty():
+    expected = ()
+    actual = take_end(3, ())
+    assert_equal(expected, actual)
+
+def test_take_end_from_none():
+    expected = ()
+    actual = take_end(3, None)
+    assert_equal(expected, actual)
+
+def test_take_end_zero():
+    expected = ()
+    actual = take_end(0, (1,2,3,4,5))
+    assert_equal(expected, actual)
+
+def test_take_end_neg():
+    expected = ()
+    actual = take_end(-3, (1,2,3,4,5))
+    assert_equal(expected, actual)
+
+def test_take_end_immutable():
+    a = [1,2,3]
+    expected = a
+    take_end(3, a)
+    actual = a
+    assert_equal(expected, actual)
+
 # drop() tests
 
 def test_drop_happy():
@@ -198,6 +237,45 @@ def test_drop_immutable():
     a = [1,2,3]
     expected = a
     drop(3, a)
+    actual = a
+    assert_equal(expected, actual)
+
+# drop_end() tests
+
+def test_drop_end_happy():
+    expected = (1,2)
+    actual = drop_end(1, (1,2,3))
+    assert_equal(expected, actual)
+
+def test_drop_end_all():
+    expected = ()
+    actual = drop_end(3, (1,2,3))
+    assert_equal(expected, actual)
+
+def test_drop_end_more():
+    expected = ()
+    actual = drop_end(5, (1,2,3))
+    assert_equal(expected, actual)
+
+def test_drop_end_zero():
+    expected = (1,2,3)
+    actual = drop_end(0, (1,2,3))
+    assert_equal(expected, actual)
+
+def test_drop_end_negative():
+    expected = (1,2,3)
+    actual = drop_end(-3, (1,2,3))
+    assert_equal(expected, actual)
+
+def test_drop_end_from_none():
+    expected = ()
+    actual = drop_end(3, None)
+    assert_equal(expected, actual)
+
+def test_drop_end_immutable():
+    a = [1,2,3]
+    expected = a
+    drop_end(3, a)
     actual = a
     assert_equal(expected, actual)
 

@@ -54,12 +54,22 @@ def snoc(h, t=None):
 def take(n, t):
     if n <= 0:
         return ()
-    return _tuplize(t)[0:n]
+    return _tuplize(t)[:n]
 
 def drop(n, t):
     if n <= 0:
         return _tuplize(t)
     return _tuplize(t)[n:]
+
+def drop_end(n, t):
+    if n <= 0:
+        return _tuplize(t)
+    return _tuplize(t)[:-n]
+
+def take_end(n, t):
+    if n <= 0:
+        return ()
+    return _tuplize(t)[-n:]
 
 def nth(n, t=None):
     if t is None:
@@ -74,6 +84,9 @@ def nth(n, t=None):
 
 def head(t):
     return nth(0, t)
+
+def last(t):
+    return nth(len(t) - 1, t)
 
 def tail(t):
     return drop(1, t)
@@ -98,6 +111,34 @@ def flatten(items):
         return tuple(concat(map(flatten, items)))
     # if it's neither of the above, assume it's scalar, wrap it in a 1-tuple.
     return (items,)
+
+def prop(p, item):
+    return prop_lens(p).get(item)
+
+def path(p, item):
+    return path_lens(p).get(item)
+
+def assoc_path(p, value, item):
+    return path_lens(p).set(value, item)
+
+def compose(f1, f2):
+    def f(*args, **kwargs):
+        return f1(f2(*args, **kwargs))
+    return f
+
+def identity(x, *args, **kwargs):
+    return x
+
+def rcompose(f1, f2):
+    return compose(f2, f1)
+
+def chain(*fns):
+    if len(fns) == 0:
+        return identity
+    return fold(compose, tail(fns), head(fns))
+
+def dictmap(f, item):
+    return dict((k, f(v)) for k, v in item.items())
 
 class Lens(object):
     """A Lens abstracts over a getter/setter pair and represents a "view" on
