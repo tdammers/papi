@@ -24,11 +24,6 @@ class DictResource(object):
             return None
         return self.children.get(name)
 
-    def structure_item(self, item):
-        return {
-            'message': item
-        }
-
 def application(env, start_response):
     logger.info(env)
 
