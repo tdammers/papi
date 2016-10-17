@@ -12,17 +12,20 @@ import json
 import papi.fp as fp
 from functools import partial
 from papi.hateoas import hateoas
-from papi.mime import match_mime, mime_str
+from papi.mime import match_mime, mime_str, parse_mime_type
 
 logger = logging.getLogger(__name__)
 
-def serve_resource(resource, environ, start_response):
+def serve_resource(resource, environ, start_response, converters=None):
     try:
+        if isinstance(converters, dict):
+            converters = converters.items()
         request = parse_request(environ)
         request = fp.assocs(
                     [
                         ('consumed_path', ()),
-                        ('remaining_path', request['path'])
+                        ('remaining_path', request['path']),
+                        ('converters', converters or []),
                     ],
                     request)
         status, headers, body = handle_resource(resource, request)
@@ -72,11 +75,10 @@ def handle_resource_get(resource, request):
     raise NotAcceptableException
 
 def handle_resource_get_typed(mime_pattern, resource, request):
-    if match_mime(mime_pattern, ("text", "json", {})) or \
-       match_mime(mime_pattern, ("application", "json", {})):
-        return handle_resource_get_json(resource, request)
-    else:
-        return handle_resource_get_binary(mime_pattern, resource, request)
+    binary_response = handle_resource_get_binary(mime_pattern, resource, request)
+    if binary_response is not None:
+        return binary_response
+    return handle_resource_get_structured(mime_pattern, resource, request)
 
 def handle_resource_get_binary(mime_pattern, resource, request):
     matched = resource.get_typed_body(mime_pattern)
@@ -99,7 +101,16 @@ def get_resource_body(resource):
         digest = resource
     return digest
 
-def handle_resource_get_json(resource, request):
+def get_resource_converters(resource):
+    try:
+        converters = resource.get_converters()
+    except AttributeError:
+        converters = []
+    if isinstance(converters, dict):
+        converters = converters.items()
+    return [(parse_mime_type(k), v) for k, v in converters]
+
+def handle_resource_get_structured(mime_pattern, resource, request):
     raw_body = resource.get_structured_body()
     current_path = fp.prop('consumed_path', request)
     name = fp.last(current_path)
@@ -128,7 +139,27 @@ def handle_resource_get_json(resource, request):
         body['_items'] = children_list
     if name is not None:
         body['_name'] = name
-    return make_json_response(body)
+
+    converters = fp.concat([
+        fp.prop('converters', request) or [],
+        get_resource_converters(resource) or [],
+        default_converters,
+    ])
+    for mime_type, converter in converters:
+        if match_mime(mime_pattern, mime_type, ["charset"]):
+            return make_binary_response(mime_type, converter(body))
+
+def json_converter(data):
+    return json.dumps(data)
+
+default_converters = [
+    (parse_mime_type(k), v)
+    for (k, v)
+    in [
+        ('text/json', json_converter),
+        ('application/json', json_converter),
+       ]
+]
 
 def consume_path_item(request):
     first_item = fp.head(fp.prop('remaining_path', request))

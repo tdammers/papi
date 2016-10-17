@@ -98,7 +98,7 @@ def fold(func, items, initial=None):
     return accum
 
 def concat(items):
-    return fold(lambda x, y: x + y, items, ())
+    return fold(lambda x, y: tuple(x or ()) + tuple(y or ()), items, ())
 
 def flatten(items):
     # special case for strings and bytestrings:

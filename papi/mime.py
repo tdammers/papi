@@ -4,6 +4,11 @@ from collections import namedtuple
 MimeType = namedtuple('MimeType', ['major', 'minor', 'props'])
 
 def parse_mime_type(mime_str):
+    if isinstance(mime_str, tuple):
+        # special case to initialize a mime type from an existing mime type
+        # or arbitrary tuple
+        major, minor, props = fp.take(3, mime_str + (None, None, None))
+        return MimeType(major or "*", minor or "*", props or {})
     parts = mime_str.strip().split(";")
     base = (fp.head(parts) or "*/*").split("/", 1)
     major = (fp.head(base) or "*").strip()

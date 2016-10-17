@@ -13,6 +13,12 @@ def test_parse_mime_wildcard():
     actual = parse_mime_type(src)
     assert_equal(expected, actual)
 
+def test_parse_mime_tuple():
+    src = ("text", "plain")
+    expected = ("text", "plain", {})
+    actual = parse_mime_type(src)
+    assert_equal(expected, actual)
+
 def test_parse_mime_props():
     src = "text/plain;charset=utf8;q=0.2"
     expected = ("text", "plain", {"charset":"utf8", "q": "0.2"})
