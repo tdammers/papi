@@ -302,3 +302,132 @@ def test_fold_none():
     expected = 0
     actual = fold(lambda x, y: x + y, None, 0)
     assert_equal(expected, actual)
+
+# flatten() tests
+
+def test_flatten_happy():
+    expected = (1,2,3,4)
+    actual = flatten([(1,2), 3, [[4]]])
+    assert_equal(expected, actual)
+
+def test_flatten_scalar():
+    expected = (1,)
+    actual = flatten(1)
+    assert_equal(expected, actual)
+
+def test_flatten_string():
+    expected = ("hi!",)
+    actual = flatten("hi!")
+    assert_equal(expected, actual)
+
+# prop_lens tests
+
+def test_prop_lens_get():
+    lens = prop_lens("foo")
+    data = {"foo": "bar", "baz": "quux"}
+    expected = "bar"
+    actual = Lens.get(lens, data)
+    assert_equal(expected, actual)
+
+def test_prop_lens_set():
+    lens = prop_lens("foo")
+    data = {"baz": "quux"}
+    expected = {"foo": "bar", "baz": "quux"}
+    actual = Lens.set(lens, "bar", data)
+    assert_equal(expected, actual)
+
+def test_prop_lens_over():
+    lens = prop_lens("foo")
+    data = {"foo": "bar", "baz": "quux"}
+    expected = {"foo": "BAR", "baz": "quux"}
+    actual = Lens.over(lens, lambda x: x.upper(), data)
+    assert_equal(expected, actual)
+
+def test_prop_lens_over_nonexistent():
+    lens = prop_lens("foo")
+    data = {"baz": "quux"}
+    expected = {"baz": "quux"}
+    actual = Lens.over(lens, lambda x: x.upper(), data)
+    assert_equal(expected, actual)
+
+def test_prop_lens_overwrite():
+    lens = prop_lens("foo")
+    data = {"foo": "canary", "baz": "quux"}
+    expected = {"foo": "bar", "baz": "quux"}
+    actual = Lens.set(lens, "bar", data)
+    assert_equal(expected, actual)
+
+def test_prop_lens_set_immutable():
+    lens = prop_lens("foo")
+    data = {"baz": "quux"}
+    expected = {"baz": "quux"}
+    Lens.set(lens, "bar", data)
+    actual = data
+    assert_equal(expected, actual)
+
+# compose_lens test
+
+def test_composed_lens_get():
+    lens = compose_lens(prop_lens("foo"), prop_lens("bar"))
+    data = {"foo": {"bar": "baz"}}
+    expected = "baz"
+    actual = Lens.get(lens, data)
+    assert_equal(expected, actual)
+
+def test_composed_lens_set():
+    lens = compose_lens(prop_lens("foo"), prop_lens("bar"))
+    data = {"foo": {"bar": "baz"}}
+    expected = {"foo": {"bar": "quux"}}
+    actual = Lens.set(lens, "quux", data)
+    assert_equal(expected, actual)
+
+def test_composed_lens_over():
+    lens = compose_lens(prop_lens("foo"), prop_lens("bar"))
+    data = {"foo": {"bar": "baz"}}
+    expected = {"foo": {"bar": "BAZ"}}
+    actual = Lens.over(lens, lambda x: x.upper(), data)
+    assert_equal(expected, actual)
+
+# path_lens tests
+
+def test_path_lens_get_variadic():
+    lens = path_lens("foo", "bar")
+    data = {"foo": {"bar": "baz"}}
+    expected = "baz"
+    actual = Lens.get(lens, data)
+    assert_equal(expected, actual)
+
+def test_path_lens_get_mixed():
+    lens = path_lens("foo", prop_lens("bar"))
+    data = {"foo": {"bar": "baz"}}
+    expected = "baz"
+    actual = Lens.get(lens, data)
+    assert_equal(expected, actual)
+
+def test_path_lens_get_list():
+    lens = path_lens(["foo", "bar"])
+    data = {"foo": {"bar": "baz"}}
+    expected = "baz"
+    actual = Lens.get(lens, data)
+    assert_equal(expected, actual)
+
+def test_path_lens_get_nested():
+    lens = path_lens(("foo", ("bar",)))
+    data = {"foo": {"bar": "baz"}}
+    expected = "baz"
+    actual = Lens.get(lens, data)
+    assert_equal(expected, actual)
+
+def test_path_lens_set():
+    lens = path_lens("foo", "bar")
+    data = {"foo": {"bar": "baz"}}
+    expected = {"foo": {"bar": "quux"}}
+    actual = Lens.set(lens, "quux", data)
+    assert_equal(expected, actual)
+
+def test_path_lens_over():
+    lens = path_lens("foo", "bar")
+    data = {"foo": {"bar": "baz"}}
+    expected = {"foo": {"bar": "BAZ"}}
+    actual = Lens.over(lens, lambda x: x.upper(), data)
+    assert_equal(expected, actual)
