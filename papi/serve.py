@@ -145,13 +145,17 @@ def handle_resource_get_structured(mime_pattern, resource, request):
         get_resource_response_writers(resource) or [],
         default_response_writers,
     ])
+    query = fp.prop('query', request)
     for mime_type, response_writer in response_writers:
         if match_mime(mime_pattern, mime_type, ["charset"]):
-            converted = response_writer(body)
+            converted = response_writer(body, **query)
             return make_binary_response(mime_type, converted)
 
-def json_writer(data):
-    return json.dumps(data)
+def json_writer(data, **query):
+    kwargs = {}
+    if query.get('pretty'):
+        kwargs['indent'] = 2
+    return json.dumps(data, **kwargs)
 
 default_response_writers = [
     (parse_mime_type(k), v)
