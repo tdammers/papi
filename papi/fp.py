@@ -140,6 +140,9 @@ def chain(*fns):
 def dictmap(f, item):
     return dict((k, f(v)) for k, v in item.items())
 
+def cat_maybes(items):
+    return tuple((item for item in items if item is not None))
+
 class Lens(object):
     """A Lens abstracts over a getter/setter pair and represents a "view" on
     a data object.
