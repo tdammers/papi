@@ -1,5 +1,5 @@
 from papi.fp import *
-from papi.test_utils import assert_equal
+from tests.test_utils import assert_equal
 
 # assoc() tests
 
@@ -388,6 +388,13 @@ def test_flatten_scalar():
 def test_flatten_string():
     expected = ("hi!",)
     actual = flatten("hi!")
+    assert_equal(expected, actual)
+
+# cat_maybes test
+
+def test_cat_maybes():
+    expected = (1,2,3,4)
+    actual = cat_maybes((1,2,None,3,None,None,4,None))
     assert_equal(expected, actual)
 
 # prop_lens tests

@@ -1,5 +1,5 @@
 from papi.mime import *
-from papi.test_utils import assert_equal
+from tests.test_utils import assert_equal
 
 def test_parse_mime_simple():
     src = "text/plain"
