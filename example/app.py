@@ -4,6 +4,8 @@ from papi.serve import serve_resource
 import papi.fp as fp
 from papi.mime import match_mime, parse_mime_type
 from papi.exceptions import ResourceException
+import random
+import string
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +38,21 @@ class DictResource(object):
         return self.children.get(name)
 
     def store(self, input, name=None, content_type=None):
+        def make_token():
+            alphabet = string.ascii_letters + string.digits
+            return ''.join((random.choice(alphabet) for _ in range(0, 16)))
+
         if match_mime(text_plain_any, content_type):
             raw_body = input.read()
             charset = content_type.props.get('charset', 'ascii')
             body = raw_body.decode(charset)
+            if name is None:
+                base_name = (fp.head(body.split()) or "unnamed").lower()
+                name = base_name
+                while name in self.children:
+                    name = base_name + "-" + make_token()
             self.children[name] = DictResource(body)
-            return body
+            return name, body
         else:
             raise ResourceException(ResourceException.reason_wrong_type)
 

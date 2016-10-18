@@ -64,13 +64,13 @@ def handle_resource_self(resource, request, parent_resource=None):
     method = fp.prop('method', request).upper()
     logger.warn(method)
     if method == 'GET':
-        return handle_resource_get(resource, request, parent_resource=parent_resource)
-    # elif method == 'POST':
-    #     return handle_resource_post(resource, request)
+        return handle_resource_get(resource, request, parent_resource)
+    elif method == 'POST':
+        return handle_resource_post(resource, request, parent_resource)
     elif method == 'PUT':
-        return handle_resource_put(resource, request, parent_resource=parent_resource)
+        return handle_resource_put(resource, request, parent_resource)
     # elif method == 'DELETE':
-    #     return handle_resource_delete(resource, request)
+    #     return handle_resource_delete(resource, request, parent_resource)
     else:
         raise MethodNotAllowedException
 
@@ -94,9 +94,22 @@ def handle_resource_put(resource, request, parent_resource=None):
         raise MethodNotAllowedException
 
     input = fp.prop('input',  request)
-    body = parent_resource.store(input, name=name, content_type=content_type)
+    name, body = parent_resource.store(input, name=name, content_type=content_type)
 
     return make_json_response(hateoas(path, body))
+
+def handle_resource_post(resource, request, parent_resource=None):
+    if resource is None:
+        raise NotFoundException
+    content_type = fp.prop('content_type', request)
+    path = fp.prop('consumed_path', request)
+    if not hasattr(resource, 'store'):
+        raise MethodNotAllowedException
+
+    input = fp.prop('input',  request)
+    name, body = resource.store(input, name=None, content_type=content_type)
+
+    return make_json_response(hateoas(fp.snoc(name, path), body))
 
 def handle_resource_get_typed(mime_pattern, resource, request):
     binary_response = handle_resource_get_binary(mime_pattern, resource, request)
