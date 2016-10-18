@@ -37,24 +37,32 @@ class DictResource(object):
             return None
         return self.children.get(name)
 
-    def store(self, input, name=None, content_type=None):
-        def make_token():
-            alphabet = string.ascii_letters + string.digits
-            return ''.join((random.choice(alphabet) for _ in range(0, 16)))
-
+    def parse_body(self, input, content_type=None):
         if match_mime(text_plain_any, content_type):
             raw_body = input.read()
             charset = content_type.props.get('charset', 'ascii')
             body = raw_body.decode(charset)
-            if name is None:
-                base_name = (fp.head(body.split()) or "unnamed").lower()
-                name = base_name
-                while name in self.children:
-                    name = base_name + "-" + make_token()
-            self.children[name] = DictResource(body)
-            return name, body
+            return body
         else:
             raise ResourceException(ResourceException.reason_wrong_type)
+
+    def create(self, input, content_type=None):
+        def make_token():
+            alphabet = string.ascii_letters + string.digits
+            return ''.join((random.choice(alphabet) for _ in range(0, 16)))
+
+        body = self.parse_body(input, content_type)
+        base_name = (fp.head(body.split()) or "unnamed").lower()
+        name = base_name
+        while name in self.children:
+            name = base_name + "-" + make_token()
+        self.children[name] = DictResource(body)
+        return name, body
+
+    def store(self, input, name, content_type=None):
+        body = self.parse_body(input, content_type)
+        self.children[name] = DictResource(body)
+        return name, body
 
 raw_things = {
     'apple': "I am an apple. Eat me.",

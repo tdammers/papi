@@ -94,7 +94,7 @@ def handle_resource_put(resource, request, parent_resource=None):
         raise MethodNotAllowedException
 
     input = fp.prop('input',  request)
-    name, body = parent_resource.store(input, name=name, content_type=content_type)
+    name, body = parent_resource.store(input, name, content_type)
 
     return make_json_response(hateoas(path, body))
 
@@ -103,11 +103,11 @@ def handle_resource_post(resource, request, parent_resource=None):
         raise NotFoundException
     content_type = fp.prop('content_type', request)
     path = fp.prop('consumed_path', request)
-    if not hasattr(resource, 'store'):
+    if not hasattr(resource, 'create'):
         raise MethodNotAllowedException
 
     input = fp.prop('input',  request)
-    name, body = resource.store(input, name=None, content_type=content_type)
+    name, body = resource.create(input, content_type)
 
     return make_json_response(hateoas(fp.snoc(name, path), body))
 
