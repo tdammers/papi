@@ -1,6 +1,103 @@
 from papi.fp import *
 from tests.test_utils import assert_equal
 
+# fmap() tests
+
+def test_fmap_list():
+    expected = (2,3,4)
+    actual = tuple(fmap(lambda x: x + 1, (1,2,3)))
+    assert_equal(expected, actual)
+
+def test_fmap_dict():
+    expected = {"foo": 2, "bar": 3}
+    actual = fmap(lambda x: x + 1, {"foo": 1, "bar": 2})
+    assert_equal(expected, actual)
+
+def test_fmap_fn():
+    def foo():
+        return 1
+    expected = 2
+    actual = (fmap(lambda x: x + 1, foo))()
+    assert_equal(expected, actual)
+
+def test_fmap_fn_return_none():
+    def foo():
+        return None
+    expected = None
+    actual = (fmap(lambda x: x + 1, foo))()
+    assert_equal(expected, actual)
+
+def test_fmap_none():
+    expected = None
+    actual = fmap(lambda x: x + 1, None)
+    assert_equal(expected, actual)
+
+def test_fmap_scalar():
+    expected = 2
+    actual = fmap(lambda x: x + 1, 1)
+    assert_equal(expected, actual)
+
+# dictmap() tests
+
+def test_dictmap_dict():
+    expected = {"foo": 2, "bar": 3}
+    actual = dictmap(lambda x: x + 1, {"foo": 1, "bar": 2})
+    assert_equal(expected, actual)
+
+# compose() tests
+
+def test_compose():
+    def a(i):
+        return i * 7
+
+    def b(i):
+        return i + 5
+
+    composed = compose(a, b)
+    expected = (3 + 5) * 7
+    actual = composed(3)
+    assert_equal(expected, actual)
+
+# chain() tests
+
+def test_chain():
+    def a(i):
+        return i * 7
+
+    def b(i):
+        return i + 5
+
+    composed = chain(a, b)
+    expected = (3 + 5) * 7
+    actual = composed(3)
+    assert_equal(expected, actual)
+
+def test_chain_empty():
+    composed = chain()
+    expected = 3
+    actual = composed(3)
+    assert_equal(expected, actual)
+
+# rcompose() tests
+
+def test_rcompose():
+    def a(i):
+        return i * 7
+
+    def b(i):
+        return i + 5
+
+    composed = rcompose(a, b)
+    expected = (3 * 7) + 5
+    actual = composed(3)
+    assert_equal(expected, actual)
+
+# identity() tests
+
+def test_identity():
+    for i in [1, 23, None, (1,2,3), "hello"]:
+        assert_equal(i, identity(i))
+
 # assoc() tests
 
 def test_assoc_normal():
@@ -33,6 +130,13 @@ def test_assoc_immutable():
     a = {'baz':'bar'}
     assoc('baz', 'quux', a)
     actual = a
+    assert_equal(expected, actual)
+
+# dissoc() tests
+
+def test_dissoc_normal():
+    expected = {'foo':'bar'}
+    actual = dissoc('baz', {'foo': 'bar', 'baz': 'quux'})
     assert_equal(expected, actual)
 
 # assocs() tests
@@ -351,6 +455,30 @@ def test_tail_immutable():
     actual = a
     assert_equal(expected, actual)
 
+# last() tests
+
+def test_last_happy():
+    expected = 3
+    actual = last((1,2,3))
+    assert_equal(expected, actual)
+
+def test_last_empty():
+    expected = None
+    actual = last(())
+    assert_equal(expected, actual)
+
+def test_last_none():
+    expected = None
+    actual = last(None)
+    assert_equal(expected, actual)
+
+def test_last_immutable():
+    a = [1,2,3]
+    last(a)
+    expected = a
+    actual = a
+    assert_equal(expected, actual)
+
 # fold() tests
 
 def test_fold_happy():
@@ -390,11 +518,57 @@ def test_flatten_string():
     actual = flatten("hi!")
     assert_equal(expected, actual)
 
+def test_flatten_bytes():
+    expected = (b"hi!",)
+    actual = flatten(b"hi!")
+    assert_equal(expected, actual)
+
 # cat_maybes test
 
 def test_cat_maybes():
     expected = (1,2,3,4)
     actual = cat_maybes((1,2,None,3,None,None,4,None))
+    assert_equal(expected, actual)
+
+# prop() tests
+
+def test_prop_happy():
+    expected = 1
+    actual = prop('foo', {'bar': 2, 'foo': 1})
+    assert_equal(expected, actual)
+
+# path() tests
+
+def test_path_happy():
+    expected = 1
+    actual = path(['foo', 'bar'], {'foo': {'bar': 1}})
+    assert_equal(expected, actual)
+
+def test_path_notfound():
+    expected = None
+    actual = path(['baz', 'bar'], {'foo': {'bar': 1}})
+    assert_equal(expected, actual)
+
+# assoc_path() tests
+
+def test_assoc_path_happy():
+    expected = {'foo': {'bar': 1}}
+    actual = assoc_path(['foo', 'bar'], 1, {'foo': {'bar': 3}})
+    assert_equal(expected, actual)
+
+def test_assoc_path_simple_on_empty():
+    expected = {'foo': 1}
+    actual = assoc_path(['foo'], 1, {})
+    assert_equal(expected, actual)
+
+def test_assoc_path_on_empty():
+    expected = {'foo': {'bar': 1}}
+    actual = assoc_path(('foo', 'bar'), 1, {})
+    assert_equal(expected, actual)
+
+def test_assoc_path_on_none():
+    expected = {'foo': {'bar': 1}}
+    actual = assoc_path(('foo', 'bar'), 1, None)
     assert_equal(expected, actual)
 
 # prop_lens tests
@@ -410,6 +584,20 @@ def test_prop_lens_set():
     lens = prop_lens("foo")
     data = {"baz": "quux"}
     expected = {"foo": "bar", "baz": "quux"}
+    actual = Lens.set(lens, "bar", data)
+    assert_equal(expected, actual)
+
+def test_prop_lens_set_empty():
+    lens = prop_lens("foo")
+    data = {}
+    expected = {"foo": "bar"}
+    actual = Lens.set(lens, "bar", data)
+    assert_equal(expected, actual)
+
+def test_prop_lens_set_none():
+    lens = prop_lens("foo")
+    data = None
+    expected = {"foo": "bar"}
     actual = Lens.set(lens, "bar", data)
     assert_equal(expected, actual)
 
@@ -500,6 +688,12 @@ def test_path_lens_set():
     data = {"foo": {"bar": "baz"}}
     expected = {"foo": {"bar": "quux"}}
     actual = Lens.set(lens, "quux", data)
+    assert_equal(expected, actual)
+
+def test_path_lens_set_empty():
+    lens = path_lens(["foo", "bar"])
+    expected = {"foo": {"bar": "quux"}}
+    actual = Lens.set(lens, "quux", {})
     assert_equal(expected, actual)
 
 def test_path_lens_over():

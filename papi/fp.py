@@ -21,6 +21,7 @@ def fmap(f, d):
                 return None
             else:
                 return f(retval)
+        return wrapped
     elif d is None:
         return None
     else:
@@ -86,6 +87,8 @@ def head(t):
     return nth(0, t)
 
 def last(t):
+    if t is None:
+        return None
     return nth(len(t) - 1, t)
 
 def tail(t):
@@ -187,9 +190,15 @@ def prop_lens(prop_name):
     """Create a Lens that drills down into a dict-like object's named property.
     """
     def getter(subject):
+        if subject is None:
+            return None
         return subject.get(prop_name)
+
     def setter(value, subject):
+        if subject is None:
+            subject = {}
         return assoc(prop_name, value, subject)
+
     return Lens(getter, setter)
 
 def path_lens(*path):
@@ -242,8 +251,12 @@ def compose_lens(left, right):
     """
     def getter(subject):
         return right.get(left.get(subject))
+
     def setter(value, subject):
-        return left.over(lambda inner: right.set(value, inner), subject)
+        inner = left.get(subject) or {}
+        new_inner = right.set(value, inner)
+        return left.set(new_inner, subject)
+
     return Lens(getter, setter)
 
 def identity_lens():
