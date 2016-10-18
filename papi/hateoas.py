@@ -3,7 +3,7 @@ import papi.fp as fp
 def join_path(path):
     return '/' + '/'.join(fp.flatten(path))
 
-def hateoas(path, item):
+def hateoas(path, item, page=None):
     if item == '':
         item = {'_value': item}
     try:
