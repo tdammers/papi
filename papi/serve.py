@@ -60,7 +60,7 @@ def handle_resource(resource, request, parent_resource=None):
             new_request,
             parent_resource=resource)
 
-def handle_resource_self(resource, request, parent_resource=None):
+def handle_resource_self(resource, request, parent_resource):
     method = fp.prop('method', request).upper()
     logger.warn(method)
     if method == 'GET':
@@ -69,12 +69,12 @@ def handle_resource_self(resource, request, parent_resource=None):
         return handle_resource_post(resource, request, parent_resource)
     elif method == 'PUT':
         return handle_resource_put(resource, request, parent_resource)
-    # elif method == 'DELETE':
-    #     return handle_resource_delete(resource, request, parent_resource)
+    elif method == 'DELETE':
+        return handle_resource_delete(resource, request, parent_resource)
     else:
         raise MethodNotAllowedException
 
-def handle_resource_get(resource, request, parent_resource=None):
+def handle_resource_get(resource, request, parent_resource):
     if resource is None:
         raise NotFoundException
     accepts = fp.prop('accept', request)
@@ -84,7 +84,7 @@ def handle_resource_get(resource, request, parent_resource=None):
             return accepted
     raise NotAcceptableException
 
-def handle_resource_put(resource, request, parent_resource=None):
+def handle_resource_put(resource, request, parent_resource):
     if parent_resource is None:
         raise NotFoundException
     content_type = fp.prop('content_type', request)
@@ -98,7 +98,19 @@ def handle_resource_put(resource, request, parent_resource=None):
 
     return make_json_response(hateoas(path, body))
 
-def handle_resource_post(resource, request, parent_resource=None):
+def handle_resource_delete(resource, request, parent_resource):
+    if parent_resource is None:
+        raise NotFoundException
+    path = fp.prop('consumed_path', request)
+    name = fp.last(path)
+    if not hasattr(parent_resource, 'delete'):
+        raise MethodNotAllowedException
+
+    parent_resource.delete(name)
+
+    return make_empty_response()
+
+def handle_resource_post(resource, request, parent_resource):
     if resource is None:
         raise NotFoundException
     content_type = fp.prop('content_type', request)
@@ -242,6 +254,13 @@ def make_binary_response(
         body = data
     else:
         body = str(data).encode('utf8')
+    return ((status, status_names.get(status, 'OK')), headers, body)
+
+def make_empty_response(mime_type=None, status=204, headers=None):
+    content_type = mime_str(mime_type or parse_mime_type("text/plain"))
+    headers = list(headers or [])
+    headers.append(('Content-type', content_type))
+    body = b""
     return ((status, status_names.get(status, 'OK')), headers, body)
 
 status_names = {

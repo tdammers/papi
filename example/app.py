@@ -55,7 +55,10 @@ class DictResource(object):
         base_name = (fp.head(body.split()) or "unnamed").lower()
         name = base_name
         while name in self.children:
-            name = base_name + "-" + make_token()
+            if base_name == "":
+                name = make_token()
+            else:
+                name = make_token() + "-" + base_name
         self.children[name] = DictResource(body)
         return name, body
 
@@ -63,6 +66,13 @@ class DictResource(object):
         body = self.parse_body(input, content_type)
         self.children[name] = DictResource(body)
         return name, body
+
+    def delete(self, name):
+        if name in self.children:
+            del self.children[name]
+            return True
+        else:
+            return False
 
 raw_things = {
     'apple': "I am an apple. Eat me.",
