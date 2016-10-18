@@ -6,7 +6,8 @@ from papi.exceptions import RestException, \
                             MethodNotAllowedException, \
                             NotAcceptableException, \
                             ConflictException, \
-                            UnsupportedMediaException
+                            UnsupportedMediaException, \
+                            ResourceException
 from traceback import format_exc
 import json
 import papi.fp as fp
@@ -28,7 +29,10 @@ def serve_resource(resource, environ, start_response, response_writers=None):
                         ('response_writers', response_writers or []),
                     ],
                     request)
-        status, headers, body = handle_resource(resource, request)
+        try:
+            status, headers, body = handle_resource(resource, request)
+        except ResourceException as e:
+            e.raise_as_rest_exception()
     except RestException as e:
         status = e.get_http_status()
         status_code, status_msg = status
@@ -40,39 +44,59 @@ def serve_resource(resource, environ, start_response, response_writers=None):
         body = body.encode('utf8')
     return body
 
-def handle_resource(resource, request):
+def handle_resource(resource, request, parent_resource=None):
     remaining_path = fp.prop('remaining_path', request)
     print(remaining_path)
     if len(remaining_path) == 0:
-        return handle_resource_self(resource, request)
+        return handle_resource_self(
+            resource,
+            request,
+            parent_resource=parent_resource)
     else:
         child_name, new_request = consume_path_item(request)
         child = resource.get_child(child_name)
-        if child is None:
-            raise NotFoundException
-        return handle_resource(child, new_request)
+        return handle_resource(
+            child,
+            new_request,
+            parent_resource=resource)
 
-def handle_resource_self(resource, request):
+def handle_resource_self(resource, request, parent_resource=None):
     method = fp.prop('method', request).upper()
     logger.warn(method)
     if method == 'GET':
-        return handle_resource_get(resource, request)
+        return handle_resource_get(resource, request, parent_resource=parent_resource)
     # elif method == 'POST':
-    #     handle_resource_post(resource, request)
-    # elif method == 'PUT':
-    #     handle_resource_put(resource, request)
+    #     return handle_resource_post(resource, request)
+    elif method == 'PUT':
+        return handle_resource_put(resource, request, parent_resource=parent_resource)
     # elif method == 'DELETE':
-    #     handle_resource_delete(resource, request)
+    #     return handle_resource_delete(resource, request)
     else:
         raise MethodNotAllowedException
 
-def handle_resource_get(resource, request):
+def handle_resource_get(resource, request, parent_resource=None):
+    if resource is None:
+        raise NotFoundException
     accepts = fp.prop('accept', request)
     for mime_pattern in accepts:
         accepted = handle_resource_get_typed(mime_pattern, resource, request)
         if accepted is not None:
             return accepted
     raise NotAcceptableException
+
+def handle_resource_put(resource, request, parent_resource=None):
+    if parent_resource is None:
+        raise NotFoundException
+    content_type = fp.prop('content_type', request)
+    path = fp.prop('consumed_path', request)
+    name = fp.last(path)
+    if not hasattr(parent_resource, 'store'):
+        raise MethodNotAllowedException
+
+    input = fp.prop('input',  request)
+    body = parent_resource.store(input, name=name, content_type=content_type)
+
+    return make_json_response(hateoas(path, body))
 
 def handle_resource_get_typed(mime_pattern, resource, request):
     binary_response = handle_resource_get_binary(mime_pattern, resource, request)
