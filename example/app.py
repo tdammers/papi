@@ -38,7 +38,9 @@ class DictResource(object):
         return self.children.get(name)
 
     def parse_body(self, input, content_type=None):
+        print(content_type)
         if match_mime(text_plain_any, content_type):
+            print("MATCH")
             raw_body = input.read()
             charset = content_type.props.get('charset', 'ascii')
             body = raw_body.decode(charset)

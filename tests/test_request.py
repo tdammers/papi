@@ -35,12 +35,10 @@ def test_get_headers_happy():
     env = {
         'HTTP_ACCEPT': 'text/plain',
         'HTTP_HOST': 'example.org',
-        'HTTP_CONTENT_TYPE': 'text/plain',
     }
     expected = {
         'Accept': 'text/plain',
         'Host': 'example.org',
-        'Content-Type': 'text/plain',
     }
     actual = get_headers(env)
     assert_equal(expected, actual)
@@ -51,7 +49,7 @@ def test_parse_request_happy():
     env = {
         'HTTP_ACCEPT': 'text/plain',
         'HTTP_HOST': 'example.org',
-        'HTTP_CONTENT_TYPE': 'text/plain',
+        'CONTENT_TYPE': 'text/plain',
         'PATH_INFO': '/foo',
         'REQUEST_METHOD': 'GET',
         'QUERY_STRING': 'quux=bar',
@@ -65,7 +63,6 @@ def test_parse_request_happy():
         'headers': {
             'Host': 'example.org',
             'Accept': 'text/plain',
-            'Content-Type': 'text/plain',
         },
         'query': {
             'quux': 'bar'

@@ -10,7 +10,7 @@ def parse_request(environ):
             environ.get('HTTP_ACCEPT', 'application/json'),
             sort=True),
         'content_type': parse_mime_type(
-            environ.get('HTTP_CONTENT_TYPE', 'application/json')),
+            environ.get('CONTENT_TYPE', 'application/json')),
         'headers': get_headers(environ),
         'method': environ['REQUEST_METHOD'],
         'query': dict(parse_qsl(environ['QUERY_STRING'], keep_blank_values=True)),
