@@ -54,5 +54,9 @@ def match_mime(pattern, candidate, prop_keys=()):
     return True
 
 def mime_str(m):
-    props_str = ";".join(("{0}={1}".format(k,v) for k,v in m.props.items()))
-    return "{0}/{1};{2}".format(m.major, m.minor, props_str)
+    base = "{0}/{1}".format(m.major, m.minor)
+    if len(m.props) > 0:
+        props_str = ";".join(("{0}={1}".format(k,v) for k,v in m.props.items()))
+        return "{0};{1}".format(base, props_str)
+    else:
+        return base

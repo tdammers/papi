@@ -46,7 +46,6 @@ def serve_resource(resource, environ, start_response, response_writers=None):
 
 def handle_resource(resource, request, parent_resource=None):
     remaining_path = fp.prop('remaining_path', request)
-    print(remaining_path)
     if len(remaining_path) == 0:
         return handle_resource_self(
             resource,
@@ -62,7 +61,6 @@ def handle_resource(resource, request, parent_resource=None):
 
 def handle_resource_self(resource, request, parent_resource):
     method = fp.prop('method', request).upper()
-    logger.warn(method)
     if method == 'GET':
         return handle_resource_get(resource, request, parent_resource)
     elif method == 'POST':

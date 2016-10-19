@@ -123,3 +123,9 @@ def test_mime_str_happy():
     expected = "text/plain;q=1.0"
     actual = mime_str(t)
     assert_equal(expected, actual)
+
+def test_mime_str_noprops():
+    t = MimeType("text", "plain", {})
+    expected = "text/plain"
+    actual = mime_str(t)
+    assert_equal(expected, actual)
