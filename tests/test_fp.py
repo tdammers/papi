@@ -1,5 +1,28 @@
 from papi.fp import *
+from papi.fp import _tuplize
 from tests.test_utils import assert_equal
+
+# tests for internal helpers
+
+def test__tuplize_happy():
+    expected = (1,2,3)
+    actual = _tuplize([1,2,3])
+    assert_equal(expected, actual)
+
+def test__tuplize_none():
+    expected = ()
+    actual = _tuplize(None)
+    assert_equal(expected, actual)
+
+def test__tuplize_string():
+    expected = ("hello",)
+    actual = _tuplize("hello")
+    assert_equal(expected, actual)
+
+def test__tuplize_scalar():
+    expected = (1,)
+    actual = _tuplize(1)
+    assert_equal(expected, actual)
 
 # fmap() tests
 
@@ -501,11 +524,28 @@ def test_fold_none():
     actual = fold(lambda x, y: x + y, None, 0)
     assert_equal(expected, actual)
 
+# concat() tests
+
+def test_concat_happy():
+    expected = (1,2,3,4,5,6)
+    actual = concat(((1,2,3), (4,5,6)))
+    assert_equal(expected, actual)
+
+def test_concat_strings():
+    expected = ("hello", "world")
+    actual = concat(("hello", "world"))
+    assert_equal(expected, actual)
+
 # flatten() tests
 
 def test_flatten_happy():
     expected = (1,2,3,4)
     actual = flatten([(1,2), 3, [[4]]])
+    assert_equal(expected, actual)
+
+def test_flatten_none():
+    expected = ()
+    actual = flatten(None)
     assert_equal(expected, actual)
 
 def test_flatten_scalar():
@@ -521,6 +561,11 @@ def test_flatten_string():
 def test_flatten_bytes():
     expected = (b"hi!",)
     actual = flatten(b"hi!")
+    assert_equal(expected, actual)
+
+def test_flatten_dict():
+    expected = ("hi!",)
+    actual = flatten({"foo":"hi!"})
     assert_equal(expected, actual)
 
 # cat_maybes test

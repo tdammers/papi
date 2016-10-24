@@ -1,3 +1,34 @@
+"""A collection of functional-programming primitives, loosely modeled after
+ramda.js (http://ramdajs.com/).
+
+Basic philosophy for all functions in this module:
+
+- Prefer immutable data structures; particularly, prefer tuples over lists.
+- Pure functions (none of the functions in this module have any observable side
+  effects, but some use in-place mutations for efficiency or practicality).
+- Composability: function arguments are ordered to maximize composability, that
+  is, the most variable argument comes last.
+- Total functions: functions should accept *any* value, at least for their
+  documented parameter types, and should never raise exceptions for arguments
+  of the correct types. This means that, for example, the head() function will
+  return None rather than raise an exception when you pass an empty list, and
+  likewise, the prop() function will return None when you try to get a
+  nonexistent property from a dict.
+
+Other design principles:
+
+- Strings and bytestrings should behave like scalars, not lists-of-characters /
+  list-of-bytes, in most situations.
+- While our functions are pure, we do not take extra measures to avoid
+  manipulation of data we handle from outside. If you pass in a mutable data
+  structure, we will not manipulate it in place, but we may return the original
+  data structure when no modifications are required, and we may return
+  references to parts of it rather than copying said parts. For example, the
+  prop() function will return a reference to the object stored at a particular
+  key, not a deep copy; and the identity() function will never attempt to copy
+  its argument.
+"""
+
 def fmap(f, d):
     """ A generalized "map()", similar to the "fmap" function in Haskell.
     Applies the function "f" in the functor "d". For the purposes of this
@@ -28,51 +59,91 @@ def fmap(f, d):
         return f(d)
 
 def assoc(key, val, obj=None):
+    """Add ("associate") "val" as "key" to "obj". "obj" should be a
+    dictionary-like object; if it is None, then a new empty dict will be
+    created. The return value will always be a dict, casting the original
+    argument as needed.
+    """
     new_obj = {} if obj is None else dict(obj)
     new_obj[key] = val
     return new_obj
 
 def assocs(keyvals, obj=None):
+    """Associate multiple key/value pairs into "obj". "keyvals" should be a
+    list-like collection of pairs (2-tuples or other 2-element list-likes).
+    """
     new_obj = obj
     for k,v in keyvals:
         new_obj = assoc(k, v, new_obj)
     return new_obj
 
 def dissoc(key, obj):
+    """Remove ("associate") "key" from "obj". "obj" should be a dictionary-like
+    object. The return value will always be a dict, casting the original
+    argument as needed.
+    """
     new_obj = dict(obj)
     new_obj.pop(key)
     return new_obj
 
 def _tuplize(t):
-    return () if t is None else tuple(t)
+    if type(t) is str or type(t) is bytes:
+        return (t,)
+    if t is None:
+        return ()
+    try:
+        return tuple(t)
+    except TypeError:
+        return (t,)
 
 def cons(h, t=None):
+    """Prepend a single element to a list-like structure. Always returns a
+    tuple.
+    """
     return (h,) + _tuplize(t)
 
 def snoc(h, t=None):
+    """Append a single element to a list-like structure. Always returns a
+    tuple.
+    """
     return _tuplize(t) + (h,)
 
 def take(n, t):
+    """Take the first "n" elements of list-like "t", or all of "t" if it is
+    shorter than "n" elements. Effectively, like t[:n], but always return a
+    tuple.
+    """
     if n <= 0:
         return ()
     return _tuplize(t)[:n]
 
 def drop(n, t):
+    """Take all but the first "n" elements of list-like "t", or an empty tuple
+    if "t" is shorter than "n" elements. Effectively, like t[n:], but always
+    return a tuple.
+    """
     if n <= 0:
         return _tuplize(t)
     return _tuplize(t)[n:]
 
 def drop_end(n, t):
+    """Like drop(), but remove elements from the end.
+    """
     if n <= 0:
         return _tuplize(t)
     return _tuplize(t)[:-n]
 
 def take_end(n, t):
+    """Like drop(), but take elements from the end.
+    """
     if n <= 0:
         return ()
     return _tuplize(t)[-n:]
 
 def nth(n, t=None):
+    """Get the nth element (0-based) from a list-like, or None if the list has
+    "n" or fewer elements.
+    """
     if t is None:
         return None
     n = int(n)
@@ -84,31 +155,61 @@ def nth(n, t=None):
         return None
 
 def head(t):
+    """Get the first element from a list-like, or None if it's empty.
+    """
     return nth(0, t)
 
 def last(t):
+    """Get the last element from a list-like, or None if it's empty.
+    """
     if t is None:
         return None
     return nth(len(t) - 1, t)
 
 def tail(t):
+    """Get all but the first elements from a list-like, as a tuple.
+    """
     return drop(1, t)
 
 def fold(func, items, initial=None):
+    """Left-leaning fold. 
+    """
     accum = initial
     for item in _tuplize(items):
         accum = func(accum, item)
     return accum
 
 def concat(items):
-    return fold(lambda x, y: tuple(x or ()) + tuple(y or ()), items, ())
+    """List concatenation (actually tuples).
+    Takes a list-like of list-likes, turns each element into a tuple, and
+    concatenates all these tuples into one. Any element that is not a list-like
+    will be converted into a 1-element tuple, unless it is None, in which case
+    it is converted into an empty tuple.
+    """
+    return fold(lambda x, y: _tuplize(x) + _tuplize(y), items, ())
 
 def flatten(items):
+    """Recursively flatten a nested data structure into a flat tuple of
+    elements. Data structures that are considered flattenable are:
+    - List-like collections except bytestrings and strings: lists, sets,
+      tuples, and anything else that has an __iter__() method
+    - Dictionary-like collections: dicts, and anything else that has a values()
+      method.
+    - None (which is treated as an empty list)
+    Anything else is considered a scalar value and gets added to the flattened
+    list unchanged.
+    """
+    # special case for None:
+    if items is None:
+        return ()
     # special case for strings and bytestrings:
     if isinstance(items, str):
         return (items,)
     if isinstance(items, bytes):
         return (items,)
+    # if it's a dict-like, use just the values:
+    if hasattr(items, 'values') and callable(items.values):
+        return flatten(items.values())
     # if it's iterable, turn it into a flat tuple:
     if hasattr(items, '__iter__'):
         return tuple(concat(map(flatten, items)))
@@ -116,34 +217,70 @@ def flatten(items):
     return (items,)
 
 def prop(p, item):
+    """Get property "p" from "item", or None if it doesn't exist.
+    """
     return prop_lens(p).get(item)
 
 def path(p, item):
+    """Given a list-like "p", interpret each of its elements as a property and
+    follow the resulting path recursively like "prop()" does. Any failing
+    property lookup along the way short-circuits the lookup and returns None.
+    """
     return path_lens(p).get(item)
 
 def assoc_path(p, value, item):
+    """Associate a "value" into "item" along a "path". The semantics for the
+    "path" are the same as those for "path()", but rather than getting the
+    value at that position, create a new data structure with the value at that
+    position replaced.
+    """
     return path_lens(p).set(value, item)
 
+def identity(x, *args, **kwargs):
+    """The identity function: return the first argument unchanged, ignore all
+    other arguments.
+    """
+    return x
+
 def compose(f1, f2):
+    """Function composition, in mathematical order (outer-first).
+    compose(f, g)(x) is equivalent to f(g(x)).
+    """
     def f(*args, **kwargs):
         return f1(f2(*args, **kwargs))
     return f
 
-def identity(x, *args, **kwargs):
-    return x
-
 def rcompose(f1, f2):
+    """Function composition, in pipeline order (inner-first).
+    rcompose(f, g)(x) is equivalent to g(f(x)).
+    """
     return compose(f2, f1)
 
 def chain(*fns):
+    """Function composition generalized into a variadic function.
+    The following equivalencies hold:
+
+    chain() === identity
+    chain(f) === f
+    chain(f, g) === compose(f, g)
+    chain(f, g, h) === compose(f, compose(g, h))
+    """
     if len(fns) == 0:
         return identity
     return fold(compose, tail(fns), head(fns))
 
 def dictmap(f, item):
+    """Specialized map() / fmap() for dictionaries. Maps over the values of a
+    dictionary-like object, retaining keys and key/value relationships.
+
+    For dictionary-like objects, equivalent to fmap(); for anything else, it
+    will however raise a TypeError.
+    """
     return dict((k, f(v)) for k, v in item.items())
 
 def cat_maybes(items):
+    """Specialized filter(), discarding all None's
+    """
     return tuple((item for item in items if item is not None))
 
 class Lens(object):

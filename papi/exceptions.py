@@ -4,30 +4,48 @@
 # and can thus be expressed in terms of an HTTP status code and a reason string.
 
 class RestException(Exception):
+    """Root for the REST exception hierarchy.
+    """
     def get_http_status(self):
         return (400, 'Bad Request')
 
 class MalformedException(RestException):
+    """Received input that is not well-formed according to the declared content
+    type.
+    """
     def get_http_status(self):
         return (400, 'Malformed Input')
 
 class NotFoundException(RestException):
+    """The requested document or resource does not exist.
+    """
     def get_http_status(self):
         return (404, 'Not Found')
 
 class MethodNotAllowedException(RestException):
+    """The resource does not support the requested operation.
+    """
     def get_http_status(self):
         return (405, 'Method Not Allowed')
 
 class NotAcceptableException(RestException):
+    """The resource cannot produce a document that matches any of the accepted
+    content types.
+    """
     def get_http_status(self):
         return (406, 'Not Acceptable')
 
 class ConflictException(RestException):
+    """The requested operation cannot be performed because it would violate
+    data constraints on the backend.
+    """
     def get_http_status(self):
         return (409, 'Conflict')
 
 class UnsupportedMediaException(RestException):
+    """Received input of a content type that the resource does not understand
+    or accept.
+    """
     def get_http_status(self):
         return (415, 'Unsupported Media Type')
 
