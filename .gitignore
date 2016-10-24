@@ -5,3 +5,4 @@ venv
 tags
 .coverage
 *,cover
+*.egg-info
