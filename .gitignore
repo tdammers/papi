@@ -6,3 +6,4 @@ tags
 .coverage
 *,cover
 *.egg-info
+docs
