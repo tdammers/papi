@@ -16,6 +16,7 @@
 <li>Semi-automatic content type negotiation: JSON is handled transparently, other content types are easy to support in your backend code</li>
 <li>Automatic translations of failures to HTTP error responses; uses the 4xx range of status codes correctly</li>
 <li>Runs on any compliant WSGI host, making it suitable for deployment under a wide range of web servers and protocols</li>
+<li>Method override: fake unsupported HTTP methods through GET parameters or headers</li>
 </ul>
 <h2 id="installing">Installing</h2>
 <p>Installing with pip:</p>
@@ -64,7 +65,7 @@
 {<span class="st">&quot;_parent&quot;</span>: {<span class="st">&quot;href&quot;</span>: <span class="st">&quot;/&quot;</span>}, <span class="st">&quot;_self&quot;</span>: {<span class="st">&quot;href&quot;</span>: <span class="st">&quot;/&quot;</span>}, <span class="st">&quot;_items&quot;</span>: [{<span class="st">&quot;_parent&quot;</span>:
 {<span class="st">&quot;href&quot;</span>: <span class="st">&quot;/&quot;</span>}, <span class="st">&quot;_self&quot;</span>: {<span class="st">&quot;href&quot;</span>: <span class="st">&quot;/things&quot;</span>}, <span class="st">&quot;_name&quot;</span>: <span class="st">&quot;things&quot;</span>}]}</code></pre>
 <p>That's not very readable, but we can use the <code>pretty</code> parameter to pretty-print JSON output:</p>
-<pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">&gt;</span> <span class="kw">curl</span> <span class="st">&#39;http://localhost:5000/?pretty=1&#39;</span> <span class="co"># Fetch the root resource</span>
+<pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">&gt;</span> <span class="kw">curl</span> <span class="st">&#39;http://localhost:5000/?pretty=1&#39;</span>
 <span class="kw">{</span>
   <span class="st">&quot;_parent&quot;</span>: <span class="kw">{</span>
     <span class="st">&quot;href&quot;</span>: <span class="st">&quot;/&quot;</span>
@@ -196,6 +197,10 @@
   <span class="st">&quot;_value&quot;</span>: <span class="st">&quot;Slice me, dice me, fry me&quot;</span>,
   <span class="st">&quot;_name&quot;</span>: <span class="st">&quot;potato&quot;</span>
 <span class="kw">}</span></code></pre>
+<p>Note that if you want to access the API from a web browser, it will almost certainly not support any HTTP methods other than <code>GET</code> and <code>POST</code> (plus a few that we don't care much about here, such as <code>HEAD</code> and <code>OPTIONS</code>); <code>PUT</code> and <code>DELETE</code>, in particular, will not work. Because of this, Papi has a method override feature: if you add a <code>_method</code> parameter to the query string, or a <code>X-Method-Override</code> header to the request, the value of that will override the actual request method. So the following curl requests would all produce the same behavior:</p>
+<pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">&gt;</span> <span class="kw">curl</span> <span class="st">&#39;http://localhost:5000/things/potato&#39;</span> -XPUT -i -H <span class="st">&#39;Content-Type: text/plain&#39;</span>
+<span class="kw">&gt;</span> <span class="kw">curl</span> <span class="st">&#39;http://localhost:5000/things/potato?_method=PUT&#39;</span> -XPOST -i -H <span class="st">&#39;Content-Type: text/plain&#39;</span>
+<span class="kw">&gt;</span> <span class="kw">curl</span> <span class="st">&#39;http://localhost:5000/things/potato&#39;</span> -XPOST -i -H <span class="st">&#39;X-Method-Override: PUT&#39;</span> -H <span class="st">&#39;Content-Type: text/plain&#39;</span></code></pre>
 <p>An alternative way of creating new documents is using the HTTP method <code>POST</code> on the <em>parent</em> resource, leaving the responsibility of generating a suitable unique name for the new document to the parent resource. This is what that looks like:</p>
 <pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">&gt;</span> <span class="kw">curl</span> <span class="st">&#39;http://localhost:5000/things?pretty=1&#39;</span> -XPOST -i -H <span class="st">&#39;Content-Type: text/plain&#39;</span> -d<span class="st">&#39;Carrot on a stick&#39;</span>
 <span class="kw">HTTP/1.1</span> 200 OK

@@ -22,6 +22,8 @@ to its equally simple WSGI wrapper function.
   range of status codes correctly
 - Runs on any compliant WSGI host, making it suitable for deployment under a
   wide range of web servers and protocols
+- Method override: fake unsupported HTTP methods through GET parameters or
+  headers
 
 ## Installing
 
@@ -190,7 +192,7 @@ That's not very readable, but we can use the `pretty` parameter to pretty-print
 JSON output:
 
 ```bash
-> curl 'http://localhost:5000/?pretty=1' # Fetch the root resource
+> curl 'http://localhost:5000/?pretty=1'
 {
   "_parent": {
     "href": "/"
@@ -369,6 +371,21 @@ And of course, this new document supports JSON as well:
   "_value": "Slice me, dice me, fry me",
   "_name": "potato"
 }
+```
+
+Note that if you want to access the API from a web browser, it will almost
+certainly not support any HTTP methods other than `GET` and `POST` (plus a few
+that we don't care much about here, such as `HEAD` and `OPTIONS`); `PUT` and
+`DELETE`, in particular, will not work. Because of this, Papi has a method
+override feature: if you add a `_method` parameter to the query string, or a
+`X-Method-Override` header to the request, the value of that will override the
+actual request method. So the following curl requests would all produce the
+same behavior:
+
+```bash
+> curl 'http://localhost:5000/things/potato' -XPUT -i -H 'Content-Type: text/plain'
+> curl 'http://localhost:5000/things/potato?_method=PUT' -XPOST -i -H 'Content-Type: text/plain'
+> curl 'http://localhost:5000/things/potato' -XPOST -i -H 'X-Method-Override: PUT' -H 'Content-Type: text/plain'
 ```
 
 An alternative way of creating new documents is using the HTTP method `POST` on
