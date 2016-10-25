@@ -3,6 +3,13 @@ from papi.mime import parse_http_accept, parse_mime_type
 import papi.fp as fp
 from functools import partial
 
+def parse_request_middleware(application):
+    def wrapped(environ, start_response):
+        request = parse_request(environ)
+        new_environ = fp.assoc('request', request, environ)
+        return application(new_environ, start_response)
+    return wrapped
+
 def parse_request(environ):
     return {
         'path': parse_path(environ['PATH_INFO']),

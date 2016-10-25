@@ -88,7 +88,4 @@ root = DictResource(
         'things': DictResource(children=things)
     })
 
-def application(env, start_response):
-    logger.info(env)
-
-    return serve_resource(root, env, start_response)
+application = serve_resource(root)

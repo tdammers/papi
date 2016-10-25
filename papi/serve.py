@@ -1,5 +1,6 @@
 import logging
-from papi.request import parse_request
+from papi.request import parse_request_middleware
+from papi.method_override_middleware import method_override_middleware
 from papi.exceptions import RestException, \
                             MalformedException, \
                             NotFoundException, \
@@ -17,32 +18,36 @@ from papi.mime import match_mime, mime_str, parse_mime_type
 
 logger = logging.getLogger(__name__)
 
-def serve_resource(resource, environ, start_response, response_writers=None):
-    try:
-        if isinstance(response_writers, dict):
-            response_writers = response_writers.items()
-        request = parse_request(environ)
-        request = fp.assocs(
-                    [
-                        ('consumed_path', ()),
-                        ('remaining_path', request['path']),
-                        ('response_writers', response_writers or []),
-                    ],
-                    request)
+def serve_resource(resource, response_writers=None):
+    if isinstance(response_writers, dict):
+        response_writers = response_writers.items()
+    def application(environ, start_response):
         try:
-            status, headers, body = handle_resource(resource, request)
-        except ResourceException as e:
-            e.raise_as_rest_exception()
-    except RestException as e:
-        status = e.get_http_status()
-        status_code, status_msg = status
-        headers = [('Content-type', 'text/plain;charset=utf8')]
-        body = status_msg
-    status_str = "{0} {1}".format(*status)
-    start_response(status_str, headers)
-    if type(body) is str:
-        body = body.encode('utf8')
-    return body
+            request = fp.assocs(
+                        [
+                            ('consumed_path', ()),
+                            ('remaining_path', fp.path(['request', 'path'], environ)),
+                            ('response_writers', response_writers or []),
+                        ],
+                        environ['request'])
+            try:
+                status, headers, body = handle_resource(resource, request)
+            except ResourceException as e:
+                e.raise_as_rest_exception()
+        except RestException as e:
+            status = e.get_http_status()
+            status_code, status_msg = status
+            headers = [('Content-type', 'text/plain;charset=utf8')]
+            body = status_msg
+        status_str = "{0} {1}".format(*status)
+        start_response(status_str, headers)
+        if type(body) is str:
+            body = body.encode('utf8')
+        return body
+    middlewares = fp.chain(
+        method_override_middleware,
+        parse_request_middleware)
+    return middlewares(application)
 
 def handle_resource(resource, request, parent_resource=None):
     remaining_path = fp.prop('remaining_path', request)
