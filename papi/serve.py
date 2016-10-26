@@ -168,10 +168,8 @@ def handle_resource_get_structured(mime_pattern, resource, request):
     name = fp.last(current_path)
 
     offset = fp.path(('query', 'offset'), request)
-    page = fp.path(('query', 'offset'), request) or 1
+    page = fp.path(('query', 'page'), request) or 1
     count = fp.path(('query', 'count'), request) or 20
-    if offset is None:
-        offset = count * (page - 1)
 
     body = hateoas(current_path, raw_body)
 
