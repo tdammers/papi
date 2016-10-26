@@ -6,11 +6,14 @@ from papi.mime import match_mime, parse_mime_type
 from papi.exceptions import ResourceException
 import random
 import string
+from functools import partial
 
 logger = logging.getLogger(__name__)
 
 text_plain_utf8 = parse_mime_type("text/plain;charset=utf8")
 text_plain_any = parse_mime_type("text/plain")
+text_json_any = parse_mime_type("text/json")
+application_json = parse_mime_type("application/json")
 
 class DictResource(object):
     def __init__(self, data=None, children=None):
@@ -26,10 +29,26 @@ class DictResource(object):
                 return (text_plain_utf8, self.data)
         return None
 
-    def get_children(self, *args, **kwargs):
+    def get_children(self, offset=None, count=20, page=None):
         if self.children is None:
             return None
-        return sorted(self.children.items())
+        if count is None or count == '':
+            count = 20
+        else:
+            count = int(count)
+        if offset is None or offset == '':
+            if page is None or page == '':
+                page = 1
+            else:
+                page = int(page)
+            offset = (page - 1) * count
+        else:
+            offset = int(offset)
+        print(count, offset)
+        return fp.chain(
+            partial(fp.take, count),
+            partial(fp.drop, offset),
+            sorted)(self.children.items())
 
     def get_child(self, name):
         print("Get child: {0}".format(name))
@@ -40,11 +59,20 @@ class DictResource(object):
     def parse_body(self, input, content_type=None):
         print(content_type)
         if match_mime(text_plain_any, content_type):
-            print("MATCH")
             raw_body = input.read()
             charset = content_type.props.get('charset', 'ascii')
             body = raw_body.decode(charset)
             return body
+        elif match_mime(text_json_any, content_type) or \
+             match_mime(application_json, content_type):
+             raw_body = input.read()
+             charset = content_type.props.get('charset', 'utf8')
+             json_src = raw_body.decode(charset)
+             try:
+                 body = json.loads(json_src)
+             except ValueError:
+                raise ResourceException(ResourceException.reason_malformed)
+             return body
         else:
             raise ResourceException(ResourceException.reason_wrong_type)
 
