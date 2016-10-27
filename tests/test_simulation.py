@@ -36,7 +36,7 @@ def test_root_get():
             return parse_mime_type("text/plain"), "HI!"
 
     def application(env, start_response):
-        return serve_resource(MyResource(), env, start_response)
+        return serve_resource(MyResource())(env, start_response)
 
     expected = {
         'status': '200 OK',

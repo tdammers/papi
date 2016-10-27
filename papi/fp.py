@@ -83,7 +83,8 @@ def dissoc(key, obj):
     argument as needed.
     """
     new_obj = dict(obj)
-    new_obj.pop(key)
+    if key in new_obj:
+        new_obj.pop(key)
     return new_obj
 
 def _tuplize(t):

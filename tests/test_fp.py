@@ -162,6 +162,11 @@ def test_dissoc_normal():
     actual = dissoc('baz', {'foo': 'bar', 'baz': 'quux'})
     assert_equal(expected, actual)
 
+def test_dissoc_nonexistent():
+    expected = {'foo':'bar'}
+    actual = dissoc('baz', {'foo': 'bar' })
+    assert_equal(expected, actual)
+
 # assocs() tests
 
 def test_assocs_normal():
