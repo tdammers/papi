@@ -162,18 +162,26 @@ def get_resource_response_writers(resource):
         response_writers = response_writers.items()
     return [(parse_mime_type(k), v) for k, v in response_writers]
 
+def int_param(key, request):
+    p = fp.path(('query', key), request)
+    if p is None or p == '':
+        return None
+    return int(p)
+
 def handle_resource_get_structured(mime_pattern, resource, request):
     raw_body = resource.get_structured_body()
     current_path = fp.prop('consumed_path', request)
     name = fp.last(current_path)
 
-    offset = fp.path(('query', 'offset'), request)
-    page = fp.path(('query', 'page'), request) or 1
-    count = fp.path(('query', 'count'), request) or 20
+    offset = int_param('offset', request)
+    page = int_param('page', request)
+    count = int_param('count', request)
+    if offset is None and count is not None and page is not None:
+        offset = (page - 1) * count
 
     body = hateoas(current_path, raw_body)
 
-    children = resource.get_children(offset=offset, count=count, page=page)
+    children = resource.get_children(offset=offset, count=count)
     if children is not None:
         children_alist = [
             (k, get_resource_digest(v)) for k, v in children
