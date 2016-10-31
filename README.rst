@@ -120,6 +120,11 @@ These methods need to be implemented for resources that act as
 collections. ``get_children`` returns a list of ``(name, resource)``
 pairs, and can take the following arguments to alter its behavior:
 
+-  ``filters``: a list of ``Filter`` objects. A ``Filter`` object has three
+   properties: ``operator``, ``value``, and ``propname``, where ``propname``
+   indicates which property of the document to compare, ``operator`` indicates
+   how to compare (currently only ``"equals"`` is used), and ``value`` is a
+   (string) value that the property is compared against.
 -  ``offset``: the number of items to skip from the beginning of the
    list. Works like Python's ``x[offset:]`` construct, or the ``OFFSET``
    part in an SQL ``LIMIT`` clause.

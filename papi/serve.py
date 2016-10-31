@@ -168,6 +168,22 @@ def int_param(key, request):
         return None
     return int(p)
 
+class Filter(object):
+    def __init__(self, propname, value, operator):
+        self.propname = propname
+        self.value = value
+        self.operator = operator
+
+def parse_filter(src):
+    propname, raw_value = tuple(src.split(':', 1))
+    return Filter(propname, raw_value, "equals")
+
+def parse_filters_param(key, request):
+    p = fp.path(('query', key), request)
+    if p is None or p == '':
+        return None
+    return tuple(map(parse_filter, p.split(',')))
+
 def handle_resource_get_structured(mime_pattern, resource, request):
     raw_body = resource.get_structured_body()
     current_path = fp.prop('consumed_path', request)
@@ -176,12 +192,16 @@ def handle_resource_get_structured(mime_pattern, resource, request):
     offset = int_param('offset', request)
     page = int_param('page', request)
     count = int_param('count', request)
+    filters = parse_filters_param('where', request)
     if offset is None and count is not None and page is not None:
         offset = (page - 1) * count
 
     body = hateoas(current_path, raw_body)
 
-    children = resource.get_children(offset=offset, count=count)
+    children = resource.get_children(
+        offset=offset,
+        count=count,
+        filters=filters)
     if children is not None:
         children_alist = [
             (k, get_resource_digest(v)) for k, v in children

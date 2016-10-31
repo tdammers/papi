@@ -29,7 +29,7 @@ class DictResource(object):
                 return (text_plain_utf8, self.data)
         return None
 
-    def get_children(self, offset=None, count=20, page=None):
+    def get_children(self, offset=None, count=20, page=None, filters=None):
         if self.children is None:
             return None
         if count is None or count == '':
@@ -45,10 +45,29 @@ class DictResource(object):
         else:
             offset = int(offset)
         print(count, offset)
+
+        def apply_filter(f, target):
+            compare_funcs = {
+                'equals': lambda x, y: x == y,
+            }
+
+            compare_func = compare_funcs.get(f.operator)
+            if compare_func is None:
+                return False
+            comparee = target if type(target) is dict else {"_value": target}
+            return compare_func(f.value, fp.prop(f.propname, comparee))
+            
+        def apply_filters(target):
+            for f in (filters or []):
+                if not apply_filter(f, target[1]):
+                    return False
+            return True
+
         return fp.chain(
             partial(fp.take, count),
             partial(fp.drop, offset),
-            sorted)(self.children.items())
+            sorted,
+            partial(filter, apply_filters))(self.children.items())
 
     def get_child(self, name):
         print("Get child: {0}".format(name))
