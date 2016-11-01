@@ -132,12 +132,47 @@ def handle_resource_get_typed(mime_pattern, resource, request):
         return binary_response
     return handle_resource_get_structured(mime_pattern, resource, request)
 
+def resource_accepts_ranges(resource):
+    return hasattr(resource, 'get_typed_body_range')
+
+def parse_range_header(s):
+    try:
+        unit, rhs = tuple(s.split('=', 1))
+    except ValueError:
+        raise ResourceException(ResourceException.reason_malformed)
+    if unit != 'bytes':
+        # Only 'bytes' range is supported
+        raise ResourceException(ResourceException.out_of_range)
+    try:
+        start_str, end_str = tuple(rhs.split('-'))
+        start = int(start_str)
+        end = int(end_str)
+    except ValueError:
+        raise ResourceException(ResourceException.reason_malformed)
+    return (start, end)
+
 def handle_resource_get_binary(mime_pattern, resource, request):
-    matched = resource.get_typed_body(mime_pattern)
+    accepts_ranges = resource_accepts_ranges(resource)
+    range_header = request['headers'].get('Range')
+    if range_header is None:
+        byte_range = None
+    else:
+        byte_range = parse_range_header(range_header)
+    if byte_range is None or not accepts_ranges:
+        matched = resource.get_typed_body(mime_pattern)
+    else:
+        matched = resource.get_typed_body_range(mime_pattern, byte_range)
     if matched is None:
         return None
-    mime_type, body = matched
-    return make_binary_response(mime_type, body)
+    if byte_range is None:
+        mime_type, body = matched
+        actual_range = None
+    else:
+        mime_type, body, actual_range = matched
+    return make_binary_response(
+        mime_type, body,
+        range=actual_range,
+        accepts_ranges=accepts_ranges)
 
 def get_resource_digest(resource):
     try:
@@ -277,11 +312,19 @@ def make_json_response(
 def make_binary_response(
         mime_type,
         data,
-        status=200,
-        headers=None):
+        status=None,
+        headers=None,
+        range=None,
+        accepts_ranges=False):
+    def_status = 200 if range is None else 206
+    status = status or def_status
     content_type = mime_str(mime_type)
     headers = list(headers or [])
     headers.append(('Content-type', content_type))
+    if range is not None:
+        headers.append(('Content-Range', format_range(range)))
+    if accepts_ranges:
+        headers.append(('Accept-Ranges', 'bytes'))
     if type(data) is bytes:
         body = data
     else:
@@ -295,8 +338,12 @@ def make_empty_response(mime_type=None, status=204, headers=None):
     body = b""
     return ((status, status_names.get(status, 'OK')), headers, body)
 
+def format_range(range):
+    return "bytes {0}-{1}/{2}".format(*range)
+
 status_names = {
     200: 'OK',
     201: 'Created',
-    204: 'No Content'
+    204: 'No Content',
+    206: 'Partial Content',
 }

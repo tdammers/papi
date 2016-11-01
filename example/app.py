@@ -26,8 +26,21 @@ class DictResource(object):
     def get_typed_body(self, mime_pattern):
         if isinstance(self.data, str):
             if match_mime(mime_pattern, text_plain_utf8, ["charset"]):
-                return (text_plain_utf8, self.data)
+                return (text_plain_utf8, self.data.encode('utf8'))
         return None
+
+    def get_typed_body_range(self, mime_pattern, bytes_range):
+        start, end = bytes_range
+        full_result = self.get_typed_body(mime_pattern)
+        if full_result is None:
+            return None
+        mime_type, body = full_result
+        total = len(body)
+        if start >= total or start < 0 or end < start or end < 0:
+            raise ResourceException(ResourceException.reason_out_of_range)
+        end = min(end, total)
+        return mime_type, body[start:end], (start, end, total)
+
 
     def get_children(self, offset=None, count=20, page=None, filters=None):
         if self.children is None:

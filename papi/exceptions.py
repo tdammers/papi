@@ -49,6 +49,12 @@ class UnsupportedMediaException(RestException):
     def get_http_status(self):
         return (415, 'Unsupported Media Type')
 
+class RangeNotSatisfiableException(RestException):
+    """Client requested a range that cannot be satisfied.
+    """
+    def get_http_status(self):
+        return (416, 'Requested Range Not Satisfiable')
+
 # ResourceException hierarchy
 #
 # ResourceExceptions describe failures at the "storage" level, i.e., reasons
@@ -59,12 +65,14 @@ class ResourceException(Exception):
     reason_malformed = 'malformed'
     reason_exists = 'exists'
     reason_does_not_exist = 'not_exists'
+    reason_out_of_range = 'out_of_range'
 
     rest_exception_mapping = {
         reason_wrong_type: UnsupportedMediaException,
         reason_malformed: MalformedException,
         reason_exists: ConflictException,
-        reason_does_not_exist: NotFoundException
+        reason_does_not_exist: NotFoundException,
+        reason_out_of_range: RangeNotSatisfiableException,
     }
 
     def __init__(self, reason):
