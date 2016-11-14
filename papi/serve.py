@@ -50,6 +50,8 @@ def serve_resource(resource, response_writers=None):
     return middlewares(application)
 
 def handle_resource(resource, request, parent_resource=None):
+    if resource is None:
+        raise NotFoundException
     remaining_path = fp.prop('remaining_path', request)
     if len(remaining_path) == 0:
         return handle_resource_self(
