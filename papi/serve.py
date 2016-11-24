@@ -60,7 +60,11 @@ def handle_resource(resource, request, parent_resource=None):
             parent_resource=parent_resource)
     else:
         child_name, new_request = consume_path_item(request)
+        if not hasattr(resource, 'get_child'):
+            raise NotFoundException
         child = resource.get_child(child_name)
+        if child is None:
+            raise NotFoundException
         return handle_resource(
             child,
             new_request,
@@ -154,6 +158,8 @@ def parse_range_header(s):
     return (start, end)
 
 def handle_resource_get_binary(mime_pattern, resource, request):
+    if not hasattr(resource, 'get_typed_body'):
+        return None
     accepts_ranges = resource_accepts_ranges(resource)
     range_header = request['headers'].get('Range')
     if range_header is None:
@@ -222,7 +228,10 @@ def parse_filters_param(key, request):
     return tuple(map(parse_filter, p.split(',')))
 
 def handle_resource_get_structured(mime_pattern, resource, request):
-    raw_body = resource.get_structured_body()
+    if hasattr(resource, 'get_structured_body'):
+        raw_body = resource.get_structured_body()
+    else:
+        raw_body = {}
     current_path = fp.prop('consumed_path', request)
     name = fp.last(current_path)
 
@@ -235,10 +244,13 @@ def handle_resource_get_structured(mime_pattern, resource, request):
 
     body = hateoas(current_path, raw_body)
 
-    children = resource.get_children(
-        offset=offset,
-        count=count,
-        filters=filters)
+    if hasattr(resource, 'get_children'):
+        children = resource.get_children(
+            offset=offset,
+            count=count,
+            filters=filters)
+    else:
+        children = None
     if children is not None:
         children_alist = [
             (k, get_resource_digest(v)) for k, v in children
