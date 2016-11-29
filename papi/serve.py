@@ -18,6 +18,17 @@ from papi.mime import match_mime, mime_str, parse_mime_type
 
 logger = logging.getLogger(__name__)
 
+def uncaught_exceptions_middleware(app):
+    def wrapped(env, start_response):
+        try:
+            return app(env, start_response)
+        except Exception as e:
+            logger.error("Uncaught exception", exc_info=True)
+            start_response('500 Internal Server Error',
+                [('Content-Type', 'text/json')])
+            return '{"error":"internal server error"}'
+    return wrapped
+
 def serve_resource(resource, response_writers=None):
     if isinstance(response_writers, dict):
         response_writers = response_writers.items()
@@ -45,6 +56,7 @@ def serve_resource(resource, response_writers=None):
             body = body.encode('utf8')
         return body
     middlewares = fp.chain(
+        uncaught_exceptions_middleware,
         method_override_middleware,
         parse_request_middleware)
     return middlewares(application)
