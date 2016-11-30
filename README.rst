@@ -113,12 +113,12 @@ future, any content type you want to have tagged with metadata).
 
 .. code:: python
 
-    def get_children(self, *args, **kwargs)
+    def get_children(self, offset=offset, count=count, filters=filters)
     def get_child(self, name)
 
 These methods need to be implemented for resources that act as
 collections. ``get_children`` returns a list of ``(name, resource)``
-pairs, and can take the following arguments to alter its behavior:
+pairs, and can take the following keyword arguments to alter its behavior:
 
 -  ``filters``: a list of ``Filter`` objects. A ``Filter`` object has three
    properties: ``operator``, ``value``, and ``propname``, where ``propname``
@@ -135,6 +135,10 @@ pairs, and can take the following arguments to alter its behavior:
    instead of an ``offset``. Page numbers are 1-based, and each page
    contains ``count`` entries, so ``page=2, count=10`` retrieves items
    10 through 19.
+
+It is recommended to implement ``get_children`` with additional ``*args`` and
+``**kwargs`` arguments, such that future Papi versions can add additional
+arguments without breaking compatibility.
 
 ``get_child`` gets a single child resource; the ``name`` parameter,
 throughout Papi's Python API, refers to a resource's primary key. We
