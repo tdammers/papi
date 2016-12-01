@@ -33,7 +33,7 @@ def join_url(protocol=None, domain=None, path=None, query=None):
         result += join_query(query)
     return result
 
-def hateoas(path, item, page=None, offset=None, count=None):
+def hateoas(path, item, page=None, offset=None, count=None, pageable=True):
     if item is None:
         item = {}
     elif item == '':
@@ -67,24 +67,23 @@ def hateoas(path, item, page=None, offset=None, count=None):
 
     count = 20 if count is None else count
 
-    if page is None and offset is None:
-        page = 1
-    if offset is not None:
-        next_offset_link = ("_next", join_url(
-            path=path,
-            query=fp.assoc('offset', offset+count, query)))
-        if offset > count:
-            prev_offset_link = ("_prev", join_url(
+    if pageable:
+        if offset is not None:
+            next_offset_link = ("_next", join_url(
                 path=path,
-                query=fp.assoc('offset', offset-count, query)))
-    else:
-        next_page_link = ("_next", join_url(
-            path=path,
-            query=fp.assoc('page', page+1, query)))
-        if page > 1:
-            prev_page_link = ("_prev", join_url(
+                query=fp.assoc('offset', offset+count, query)))
+            if offset > count:
+                prev_offset_link = ("_prev", join_url(
+                    path=path,
+                    query=fp.assoc('offset', offset-count, query)))
+        elif page is not None:
+            next_page_link = ("_next", join_url(
                 path=path,
-                query=fp.assoc('page', page-1, query)))
+                query=fp.assoc('page', page+1, query)))
+            if page > 1:
+                prev_page_link = ("_prev", join_url(
+                    path=path,
+                    query=fp.assoc('page', page-1, query)))
 
     meta = [ (k, {'href': x}) \
             for (k, x) in \

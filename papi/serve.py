@@ -217,8 +217,15 @@ def get_resource_response_writers(resource):
         response_writers = response_writers.items()
     return [(parse_mime_type(k), v) for k, v in response_writers]
 
+falsehoods = set(['no', '0', '', 'off'])
+
+def bool_param(key, request, default=False):
+    query = fp.prop('query', request)
+    return query.get(key, default) not in falsehoods
+
 def int_param(key, request):
     p = fp.path(('query', key), request)
+    print("{0}: {1}".format(key, p))
     if p is None or p == '':
         return None
     try:
@@ -281,14 +288,28 @@ def handle_resource_get_structured(mime_pattern, resource, request):
     count = int_param('count', request)
     filters = parse_filters_param('where', request)
     order = parse_orderings_param('order', request)
+    calculated_offset = offset
     if offset is None and count is not None and page is not None:
-        offset = (page - 1) * count
+        calculated_offset = (page - 1) * count
+    if offset is None and page is None:
+        page = 1
 
-    body = hateoas(current_path, raw_body)
+    use_hateoas = bool_param('hateoas', request, True)
+    print(use_hateoas)
+    def add_hateoas(name, current_path, raw_body, page=None, offset=None, count=None, pageable=True):
+        if use_hateoas:
+            body = hateoas(current_path, raw_body, page, offset, count, pageable)
+            if name is not None:
+                body['_name'] = name
+            return body
+        else:
+            return raw_body or {}
+    print("PAGE: {0}".format(page))
+    body = add_hateoas(name, current_path, raw_body, page, offset, count)
 
     if hasattr(resource, 'get_children'):
         children = resource.get_children(
-            offset=offset,
+            offset=calculated_offset,
             count=count,
             filters=filters,
             order=order)
@@ -296,22 +317,19 @@ def handle_resource_get_structured(mime_pattern, resource, request):
         children = None
     if children is not None:
         children_alist = [
-            (k, get_resource_digest(v)) for k, v in children
+            (k, get_resource_digest(v), hasattr(v, 'get_children')) for k, v in children
         ]
 
-        def prepare_child(kv):
-            name, value = kv
-            if not isinstance(value, dict):
+        def prepare_child(kvp):
+            name, value, pageable = kvp
+            if use_hateoas and not isinstance(value, dict):
                 value = {'_value': value}
             return fp.chain(
-                    partial(fp.assoc, '_name', name),
-                    partial(hateoas, fp.snoc(name, current_path))
-                )(value)
+                    partial(add_hateoas, name, fp.snoc(name, current_path), pageable=pageable)
+                )(raw_body=value)
 
         children_list = list(map(prepare_child, children_alist))
         body['_items'] = children_list
-    if name is not None:
-        body['_name'] = name
 
     response_writers = fp.concat([
         fp.prop('response_writers', request) or [],
