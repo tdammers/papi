@@ -113,7 +113,7 @@ future, any content type you want to have tagged with metadata).
 
 .. code:: python
 
-    def get_children(self, offset=offset, count=count, filters=filters)
+    def get_children(self, offset=0, count=10, filters=None, order=None)
     def get_child(self, name)
 
 These methods need to be implemented for resources that act as
@@ -125,6 +125,10 @@ pairs, and can take the following keyword arguments to alter its behavior:
    indicates which property of the document to compare, ``operator`` indicates
    how to compare (currently only ``"equals"`` is used), and ``value`` is a
    (string) value that the property is compared against.
+- ``order``: a list of ``(descending, order-key)`` pairs, from most-significant
+   to least-significant. If ``descending`` is ``True``, the result must be
+   ordered in descending order. ``order-key`` is specific to the resource, no
+   further interpretation is performed by Papi.
 -  ``offset``: the number of items to skip from the beginning of the
    list. Works like Python's ``x[offset:]`` construct, or the ``OFFSET``
    part in an SQL ``LIMIT`` clause.

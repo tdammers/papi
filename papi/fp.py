@@ -123,6 +123,8 @@ def drop(n, t):
     if "t" is shorter than "n" elements. Effectively, like t[n:], but always
     return a tuple.
     """
+    if n is None:
+        return _tuplize(t)
     if n <= 0:
         return _tuplize(t)
     return _tuplize(t)[n:]

@@ -7,6 +7,7 @@ from papi.exceptions import ResourceException
 import random
 import string
 from functools import partial
+from operator import itemgetter
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,11 @@ class DictResource(object):
     def __init__(self, data=None, children=None):
         self.data = data or {}
         self.children = None if children is None else dict(children)
+
+    def get_order_prop(self, key):
+        if isinstance(self.data, str):
+            return self.data if key == "_value" else 0
+        return self.data.get(key)
 
     def get_structured_body(self, **kwargs):
         return self.data
@@ -42,22 +48,18 @@ class DictResource(object):
         return mime_type, body[start:end], (start, end, total)
 
 
-    def get_children(self, offset=None, count=20, page=None, filters=None):
+    def get_children(self,
+            offset=None,
+            count=20,
+            filters=None,
+            order=None,
+            *args, **kwargs):
         if self.children is None:
             return None
         if count is None or count == '':
             count = 20
         else:
             count = int(count)
-        if offset is None or offset == '':
-            if page is None or page == '':
-                page = 1
-            else:
-                page = int(page)
-            offset = (page - 1) * count
-        else:
-            offset = int(offset)
-        print(count, offset)
 
         def apply_filter(f, target):
             compare_funcs = {
@@ -76,10 +78,21 @@ class DictResource(object):
                     return False
             return True
 
+        def apply_orderings(target):
+            print(target)
+            for desc, key in reversed(order):
+                target = sorted(
+                    target,
+                    key=lambda item: \
+                            item[0] if key == "_name" \
+                            else item[1].get_order_prop(key),
+                    reverse=desc)
+            return target
+
         return fp.chain(
             partial(fp.take, count),
             partial(fp.drop, offset),
-            sorted,
+            apply_orderings,
             partial(filter, apply_filters))(self.children.items())
 
     def get_child(self, name):

@@ -221,7 +221,10 @@ def int_param(key, request):
     p = fp.path(('query', key), request)
     if p is None or p == '':
         return None
-    return int(p)
+    try:
+        return int(p)
+    except ValueError:
+        raise MalformedException()
 
 class Filter(object):
     def __init__(self, propname, value, operator):
@@ -239,6 +242,32 @@ def parse_filters_param(key, request):
         return None
     return tuple(map(parse_filter, p.split(',')))
 
+def parse_ordering(src):
+    descending = False
+    src = src.strip()
+    if src.startswith('-'):
+        descending = True
+        src = src[1:]
+    elif src.startswith('+'):
+        descending = False
+        src = src[1:]
+    if src.endswith('-'):
+        descending = True
+        src = src[:-1]
+    elif src.endswith('+'):
+        descending = False
+        src = src[:-1]
+    return (descending, src)
+
+def parse_orderings(p):
+    return tuple(map(parse_ordering, p.split(',')))
+
+def parse_orderings_param(key, request):
+    p = fp.path(('query', key), request)
+    if p is None or p == '':
+        return None
+    return parse_orderings(p)
+
 def handle_resource_get_structured(mime_pattern, resource, request):
     if hasattr(resource, 'get_structured_body'):
         raw_body = resource.get_structured_body()
@@ -251,6 +280,7 @@ def handle_resource_get_structured(mime_pattern, resource, request):
     page = int_param('page', request)
     count = int_param('count', request)
     filters = parse_filters_param('where', request)
+    order = parse_orderings_param('order', request)
     if offset is None and count is not None and page is not None:
         offset = (page - 1) * count
 
@@ -260,7 +290,8 @@ def handle_resource_get_structured(mime_pattern, resource, request):
         children = resource.get_children(
             offset=offset,
             count=count,
-            filters=filters)
+            filters=filters,
+            order=order)
     else:
         children = None
     if children is not None:
