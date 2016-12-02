@@ -68,11 +68,11 @@ child resources), or hybrids (having both a body and child resources).
 For the root resource, you almost certainly want a collection-style
 resource, otherwise your API will only ever contain one document.
 
-Note that ``Resource`` is not a base class, it's just an implicit
-interface. Papi resolves method calls through duck typing, there is no
-need to inherit or formally implement anything, just add the methods you
-need, and that's it. Adding other methods is of course no problem at
-all.
+    Note that ``Resource`` is not a base class, it's just an implicit
+    interface. Papi resolves method calls through duck typing, there is
+    no need to inherit or formally implement anything, just add the
+    methods you need, and that's it. Adding other methods is of course no
+    problem at all.
 
 The relevant methods for a resource are:
 
@@ -103,13 +103,14 @@ version that contains only the essential properties. ``digest`` will be
 ``True`` when called on a child resource in a collection listing
 context, ``False`` when the resource is requested directly.
 
-The crux with these two methods is that **documents derived from
-``get_typed_body`` are never parsed, and no metadata is ever added**.
-This means that if you want to have Papi add HATEOAS links and a list of
-child resources to the response, you must implement
-``get_structured_body``, and if you also implement ``get_typed_body``,
-it must return ``None`` for at least the JSON content types (and, in the
-future, any content type you want to have tagged with metadata).
+    One thing to keep in mind with these two methods is that **documents
+    derived from ``get_typed_body`` are never parsed, and no metadata is
+    ever added**.  This means that if you want to have Papi add HATEOAS
+    links and a list of child resources to the response, you must
+    implement ``get_structured_body``, and if you also implement
+    ``get_typed_body``, it must return ``None`` for at least the JSON
+    content types (and, in the future, any content type you want to have
+    tagged with metadata).
 
 .. code:: python
 
@@ -169,26 +170,28 @@ resource. This is for two reasons: one, the child resource to store may
 not exist yet (this is the case for ``PUT`` requests), and two, the
 resource itself does not know its own name, nor does it need to.
 
-Some notes on these methods:
+    Some notes on these methods:
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  The ``input`` argument will contain a file-like object, which means
-   you can use the usual ``read()`` etc. methods on it to extract the
-   body. Parsing is your own responsibility, Papi does not do this for
-   you. Particularly, there is no write equivalent to the
-   ``get_structured_body`` method; however, processing JSON documents is
-   usually a simple matter of calling ``json.loads``.
--  The difference between ``create`` and ``store`` is that ``create``
-   must generate a name for the received document, and return a
-   ``name, body`` tuple (where ``body`` is a digest that describes the
-   document that has been created, in a JSON-encodable data structure
-   according to the same rules as ``get_structured_body``); multiple
-   calls to ``create`` should create multiple distinct documents, and
-   return distinct names. Conceptually, ``create`` *always* creates a
-   new document. By contrast, ``store`` takes a document name as an
-   argument, so it does not generate one itself, and multiple calls with
-   the same name will overwrite one another. While ``store`` may also
-   create new documents (if the ``name`` does not exist yet), it should
-   overwrite (update) documents when the name already exists.
+    The ``input`` argument will contain a file-like object, which means
+    you can use the usual ``read()`` etc. methods on it to extract the
+    body. Parsing is your own responsibility, Papi does not do this for
+    you. Particularly, there is no write equivalent to the
+    ``get_structured_body`` method; however, processing JSON documents is
+    usually a simple matter of calling ``json.loads``.
+
+    The difference between ``create`` and ``store`` is that ``create``
+    must generate a name for the received document, and return a
+    ``name, body`` tuple (where ``body`` is a digest that describes the
+    document that has been created, in a JSON-encodable data structure
+    according to the same rules as ``get_structured_body``); multiple
+    calls to ``create`` should create multiple distinct documents, and
+    return distinct names. Conceptually, ``create`` *always* creates a
+    new document. By contrast, ``store`` takes a document name as an
+    argument, so it does not generate one itself, and multiple calls with
+    the same name will overwrite one another. While ``store`` may also
+    create new documents (if the ``name`` does not exist yet), it should
+    overwrite (update) documents when the name already exists.
 
 Serving A Resource
 ~~~~~~~~~~~~~~~~~~
