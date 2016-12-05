@@ -80,7 +80,7 @@ class DictResource(object):
 
         def apply_orderings(target):
             print(target)
-            if order is none:
+            if order is None:
                 return target
             for desc, key in reversed(order):
                 target = sorted(
