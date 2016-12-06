@@ -13,4 +13,8 @@ def assert_equal(expected, actual, test_name=None):
         msg += " in test '{0}'".format(test_name)
     raise AssertionError(msg)
 
-
+def assert_equal_dicts(expected, actual, test_name=None):
+    return assert_equal(
+            sorted(expected.items()),
+            sorted(actual.items()),
+            test_name)
