@@ -170,28 +170,28 @@ resource. This is for two reasons: one, the child resource to store may
 not exist yet (this is the case for ``PUT`` requests), and two, the
 resource itself does not know its own name, nor does it need to.
 
-    Some notes on these methods:
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Some notes on these methods:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    The ``input`` argument will contain a file-like object, which means
-    you can use the usual ``read()`` etc. methods on it to extract the
-    body. Parsing is your own responsibility, Papi does not do this for
-    you. Particularly, there is no write equivalent to the
-    ``get_structured_body`` method; however, processing JSON documents is
-    usually a simple matter of calling ``json.loads``.
+The ``input`` argument will contain a file-like object, which means
+you can use the usual ``read()`` etc. methods on it to extract the
+body. Parsing is your own responsibility, Papi does not do this for
+you. Particularly, there is no write equivalent to the
+``get_structured_body`` method; however, processing JSON documents is
+usually a simple matter of calling ``json.loads``.
 
-    The difference between ``create`` and ``store`` is that ``create``
-    must generate a name for the received document, and return a
-    ``name, body`` tuple (where ``body`` is a digest that describes the
-    document that has been created, in a JSON-encodable data structure
-    according to the same rules as ``get_structured_body``); multiple
-    calls to ``create`` should create multiple distinct documents, and
-    return distinct names. Conceptually, ``create`` *always* creates a
-    new document. By contrast, ``store`` takes a document name as an
-    argument, so it does not generate one itself, and multiple calls with
-    the same name will overwrite one another. While ``store`` may also
-    create new documents (if the ``name`` does not exist yet), it should
-    overwrite (update) documents when the name already exists.
+The difference between ``create`` and ``store`` is that ``create``
+must generate a name for the received document, and return a
+``name, body`` tuple (where ``body`` is a digest that describes the
+document that has been created, in a JSON-encodable data structure
+according to the same rules as ``get_structured_body``); multiple
+calls to ``create`` should create multiple distinct documents, and
+return distinct names. Conceptually, ``create`` *always* creates a
+new document. By contrast, ``store`` takes a document name as an
+argument, so it does not generate one itself, and multiple calls with
+the same name will overwrite one another. While ``store`` may also
+create new documents (if the ``name`` does not exist yet), it should
+overwrite (update) documents when the name already exists.
 
 Serving A Resource
 ~~~~~~~~~~~~~~~~~~
@@ -642,4 +642,3 @@ deleted:
       ],
       "_name": "things"
     }
-
