@@ -23,10 +23,10 @@ def uncaught_exceptions_middleware(app):
         try:
             return app(env, start_response)
         except Exception as e:
-            logger.error("Uncaught exception", exc_info=True)
+            logger.error("Caught exception", exc_info=True)
             start_response('500 Internal Server Error',
                 [('Content-Type', 'text/json')])
-            return '{"error":"internal server error"}'
+            return [b'{"error":"internal server error"}']
     return wrapped
 
 def serve_resource(resource, response_writers=None):
