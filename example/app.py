@@ -151,6 +151,22 @@ class DictResource(object):
         else:
             return False
 
+class MyCustomException(Exception):
+    pass
+
+class CustomExceptionResource(object):
+    def get_structured_body(self, **kwargs):
+        raise MyCustomException()
+
+    def get_typed_body(self, mime_pattern):
+        raise MyCustomException()
+
+    def get_children(self, *args, **kwargs):
+        raise MyCustomException()
+
+    def get_child(self, *args, **kwargs):
+        raise MyCustomException()
+
 raw_things = {
     'apple': "I am an apple. Eat me.",
     'onion': "Hurt me, and I will make you cry.",
@@ -160,7 +176,14 @@ raw_things = {
 things = fp.dictmap(DictResource, raw_things)
 root = DictResource(
     children={
-        'things': DictResource(children=things)
+        'things': DictResource(children=things),
+        'throw-custom': CustomExceptionResource(),
     })
 
-application = serve_resource(root)
+def my_api_middleware(handle, resource, request):
+    try:
+        return handle(resource, request)
+    except MyCustomException:
+        raise ResourceException(ResourceException.reason_malformed)
+
+application = serve_resource(root, api_middleware=my_api_middleware)

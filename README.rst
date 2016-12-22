@@ -201,8 +201,7 @@ used to turn a valid resource into a WSGI application, like this:
 
 .. code:: python
 
-    def application(env, start_response):
-        return serve_resource(root_resource, env, start_response)
+    application = serve_resource(root_resource)
 
 And from there, it's a matter of feeding that function to a WSGI server
 (see the `WSGI documentation <https://wsgi.readthedocs.io/en/latest/>`__
