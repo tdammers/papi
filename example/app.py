@@ -156,10 +156,10 @@ class MyCustomException(Exception):
 
 class CustomExceptionResource(object):
     def get_structured_body(self, **kwargs):
-        raise MyCustomException()
+        return None
 
     def get_typed_body(self, mime_pattern):
-        raise MyCustomException()
+        return None
 
     def get_children(self, *args, **kwargs):
         raise MyCustomException()
