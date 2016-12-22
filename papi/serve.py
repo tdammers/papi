@@ -37,7 +37,7 @@ def def_api_middleware(handle, resource, request):
     """No-op API-level middleware; used as a sane default for when no
     middleware is configured.
     """
-    return handle(request, resource, request)
+    return handle(resource, request)
 
 def serve_resource(resource, response_writers=None, api_middleware=None):
     """Turns a resource into a WSGI application.
